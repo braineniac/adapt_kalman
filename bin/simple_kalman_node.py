@@ -92,16 +92,19 @@ class SimpleKalmanNode:
         self.delta_t = self.last_time - now
         self.last_time = now
 
+        self.u[2] = imu_msg.linear_acceleration.x
+
     def fake_enc_cb(self):
         # update time
         now = rospy.get_rostime()
         self.delta_t = self.last_time - now
         self.last_time = now
 
+        self.u[1] = self.twist.twist.linear.x
+
     def publish(self):
         odom_msg = Odometry()
         self.odom_pub.publish(odom_msg)
-
 
 if __name__ == '__main__':
     rospy.loginfo("Initialising simple_kalman_node")
