@@ -29,11 +29,17 @@ class SimpleKalmanNode:
         # control-input model
         self.B = np.zeros(3,3)
 
+
         # process noise covariances
         self.Q = np.zeros(3,3)
-
         # observation noise covariance
         self.R = np.zeros(3,3)
+
+        self.H = np.zeros(1,3)
+        self.z = np.zeros(3)
+        self.S = np.zeros(3,3)
+        self.K = np.zeros(3)
+        self.y k= np.zeros(3)
 
         # process noise
         self.w = np.zeros(3,3)
@@ -59,22 +65,26 @@ class SimpleKalmanNode:
         self.R[1][1] = (400/1000000) * 9.80655 / 100.0  # fake encoder covariance, Xdot
         self.R[2][2] = (400/1000000) * 9.80655          # imu covariance Xdotdot
         #self.w = np.random.mulivariate_normal(mean,q,1000)
-        self.F = np.array([[1,self.delta_t,1/2*self.delta_t**self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
-        self.B = np.array([[1,self.delta_t,1/2*self.delta_t**self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
+        self.F = np.array([[1,self.delta_t,1/2*self.delta_t*self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
+        self.B = np.array([[1,self.delta_t,1/2*self.delta_t*self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
+        self.H = np.array([1.0 0 0])
 
     def predict(self):
         """Kalman filter predict step
-        X[k+1] = F.X[k] + B.u
-        P[k+1] = F.P.F^T
         """
-        self.newstate = np.dot(self.F,self.state) + np.dot(self.B,self.u)
-        self.newp = self.dot(self.dot(self.F,self.p.T),self.F.T)
+        self.state = self.F.dot(self.state) + self.B.dot(self.u)
+        self.newp = self.F.dot(self.p).dot(np.transpose(self.F))
 
     def update(self):
         """Kalman filter update step
         """
-
-
+        # true state residual
+        self.y = self.state - self.H.dot(self.newstate)
+        self.S = self.R + self.H.dot(self.P).dot(np.transpose(self.H))
+        self.K = self.P.dot(np.transpose(self.H)).dot(np.linalg.inv(self.S))
+        self.newstate = self.state + self.K.dot(self.y)
+        self.newP = (np.identity(3) - self.K.dot(self.H)).dot(self.P).dot(np.transpose(np.identity(3) - self.K.dot(self.H))) + self.K.dot(self.R).dot(np.transpose(self.K))
+        self.y_k = self.state - self.H.dot(self.newstate)
 
     def imu_cb(self, imu_msg):
         # update time
