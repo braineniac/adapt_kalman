@@ -23,13 +23,13 @@ class SimpleKalmanNode:
         self.x_k_extr = np.zeros((3,1))     # extrapolated state
         self.P_k_extr = np.zeros((3,1))     # extrapolated covariance
         self.phi_k = np.zeros((3,3))
-        self.gamma_k = np.zeros((3,3))
+        self.gamma_k = np.zeros((3,3))      # control matrix
         self.Q_k = np.zeros((3,3))
         self.R_k = np.zeros((3,3))
         self.G_k = np.zeros((3,3))
         self.H_k = np.zeros((3,3))
         self.y_k = np.zeros((3,1))          # output
-        self.u_k = np.zeros((3,1))          # input
+        self.u_k = np.zeros((3,1))          # cocntrol vector
 
         #################
         ### ROS stuff ###
@@ -62,9 +62,8 @@ class SimpleKalmanNode:
         self.C_k = np.identity(3)
 
     def set_gain(self):
-        E = self.C_k.dot(self.P_k_pre).dot(np.transpose(self.C_k)) + self.R_k
-        self.debug_print()
-        self.L_k = self.P_k_pre.dot(np.transpose(self.C_k).dot(np.linalg.inv(E)))
+        E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.R_k
+        self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E)))
 
     def update(self):
         F = self.y_k - self.C_k.dot(self.x_k_pre)
@@ -74,7 +73,9 @@ class SimpleKalmanNode:
 
     def extrapolate(self):
         self.x_k_extr = self.phi_k.dot(self.x_k_post) + self.gamma_k.dot(self.u_k)
-        self.P_k_extr = self.phi_k.dot(self.P_k_post).dot(np.transpose(self.phi_k))
+        self.P_k_extr = self.phi_k.dot(self.P_k_post).dot(self.phi_k.T)
+
+        # update for next cycle
         self.x_k_pre = self.x_k_extr
         self.P_k_pre = self.P_k_extr
         self.publish()
