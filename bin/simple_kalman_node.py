@@ -24,6 +24,10 @@ class SimpleKalmanNode:
         self.P_k_extr = np.zeros((3,1))     # extrapolated covariance
         self.phi_k = np.zeros((3,3))
         self.gamma_k = np.zeros((3,3))
+        self.Q_k = np.zeros((3,3))
+        self.R_k = np.zeros((3,3))
+        self.G_k = np.zeros((3,3))
+        self.H_k = np.zeros((3,3))
         self.y_k = np.zeros((3,1))          # output
         self.u_k = np.zeros((3,1))          # input
 
@@ -45,17 +49,20 @@ class SimpleKalmanNode:
         self.begin_time = rospy.get_rostime()
 
         # set initial covariance
-        self.P_k_pre[1][1] = (400/1000000) * 9.80655 / 100.0  # fake encoder covariance, Xdot
-        self.P_k_pre[2][2] = (400/1000000) * 9.80655          # imu covariance Xdotdot
-        self.P_k_pre[0][0] = np.exp(-10)
-
-        #self.w = np.random.mulivariate_normal(mean,q,1000)
+        self.R_k[0][0] = np.exp(-10)
+        self.R_k[1][1] = (400/1000000) * 9.80655 / 100.0  # fake encoder covariance, Xdot
+        self.R_k[2][2] = (400/1000000) * 9.80655          # imu covariance Xdotdot
+        self.R_k[0][0] = 1
+        self.R_k[1][1] = 10
+        self.R_k[2][2] = 1000
+        self.Q_k = np.random.normal(np.exp(-10),1.0,(3,3))
+        self.P_k_pre = np.random.normal(np.exp(-10),1.0,(3,3))
         self.phi_k = np.array([[1,self.delta_t,1/2*self.delta_t*self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
         self.gamma_k = self.phi_k
         self.C_k = np.identity(3)
 
     def set_gain(self):
-        E = self.C_k.dot(self.P_k_pre).dot(np.transpose(self.C_k))
+        E = self.C_k.dot(self.P_k_pre).dot(np.transpose(self.C_k)) + self.R_k
         self.debug_print()
         self.L_k = self.P_k_pre.dot(np.transpose(self.C_k).dot(np.linalg.inv(E)))
 
@@ -91,13 +98,13 @@ class SimpleKalmanNode:
 
         self.u_k[2] = imu_msg.linear_acceleration.x
 
-    def fake_enc_cb(self):
+    def fake_enc_cb(self, enc_msg):
         # update time
         now = rospy.get_rostime()
         self.delta_t = (self.last_time - now).to_sec()
         self.last_time = now
 
-        self.u_k[1] = self.twist.twist.linear.x
+        self.u_k[1] = enc_msg.twist.twist.linear.x
 
     def publish(self):
         odom_msg = Odometry()
