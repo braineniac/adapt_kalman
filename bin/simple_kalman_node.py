@@ -23,6 +23,7 @@ class SimpleKalmanNode:
         self.x_k_extr = np.zeros((3,1))     # extrapolated state
         self.P_k_extr = np.zeros((3,1))     # extrapolated covariance
         self.phi_k = np.zeros((3,3))
+        self.D_k = np.zeros((3,3))
         self.gamma_k = np.zeros((3,3))      # control matrix
         self.Q_k = np.zeros((3,3))
         self.R_k = np.zeros((3,3))
@@ -56,6 +57,7 @@ class SimpleKalmanNode:
         self.R_k[1][1] = 10
         self.R_k[2][2] = 1000
         self.Q_k = np.random.normal(np.exp(-10),1.0,(3,3))
+        self.D_k = np.identity(3)
         self.P_k_pre = np.random.normal(np.exp(-10),1.0,(3,3))
         self.phi_k = np.array([[1,self.delta_t,1/2*self.delta_t*self.delta_t],[0,1,self.delta_t],[0,0,1.0]])
         self.gamma_k = self.phi_k
@@ -63,10 +65,10 @@ class SimpleKalmanNode:
 
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.R_k
-        self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E)))
+        self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E))
 
     def update(self):
-        F = self.y_k - self.C_k.dot(self.x_k_pre)
+        F = self.y_k - self.C_k.dot(self.x_k_pre) - self.D_k.dot(self.u_k)
         self.x_k_post = self.x_k_pre + self.L_k.dot(F)
         self.P_k_post = (np.identity(3) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
         #self.y_k = self.C_k.dot(self.x_k_post)
@@ -75,7 +77,7 @@ class SimpleKalmanNode:
         self.x_k_extr = self.phi_k.dot(self.x_k_post) + self.gamma_k.dot(self.u_k)
         self.P_k_extr = self.phi_k.dot(self.P_k_post).dot(self.phi_k.T)
 
-        # update for next cycle
+        # update for next iteration
         self.x_k_pre = self.x_k_extr
         self.P_k_pre = self.P_k_extr
         self.publish()
