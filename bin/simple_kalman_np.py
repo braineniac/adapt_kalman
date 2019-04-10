@@ -22,13 +22,17 @@ class SimpleKalman:
         self.y_k = np.zeros((2,1))          # output
         self.u_k = np.zeros((2,1))          # control vector
 
+        self.u0 = []
+        self.u1 = []
+        self.t = []
+
         self.delta_t = 0.0
 
         # set initial covariance
         #imu_stdev = (400/1000000) * 9.80655
         #fake_enc_stdev = (400/1000000) * 9.80655 / 100.0
         imu_stdev = 0.5
-        fake_enc_stdev = 0.01
+        fake_enc_stdev = 0.0001
         self.R_k[0][0] = fake_enc_stdev*fake_enc_stdev
         self.R_k[1][1] = imu_stdev*imu_stdev
         #self.v_k = np.array([[fake_enc_stdev],[imu_stdev]])
@@ -66,41 +70,32 @@ class SimpleKalman:
         t_last = 0.0
         u_k_last = np.array([0.0,0.0])
         data = np.load("/home/dan/ros/src/simple_kalman/numpy/straight.npy")
+
         for u,t in zip(data[0],data[1]):
-            # initialize time delta
-            if t_last == 0:
-                t_last = t[1] if t[0] != 0 else t[0]
-                continue
 
-            self.u_k[0] = 0.0
-
+            np.append(self.u0,np.array([u[0]]))
             if t[0] != 0.0:
-                self.delta_t = t[0] - t_last
-                t_last = t[0]
-                if u[0] - u_k_last[0] > 0.14:
-                    self.u_k[0] = u[0]
-                    u_k_last[0] = u[0]
-                elif u[0] - u_k_last[0] < -0.14:
-                    self.u_k[0] = - u_k_last[0]
-                    u_k_last[0] = u[0]
+                self.u0.append(u[0])
+                self.t.append(t[0])
 
             if t[1] != 0.0:
-                self.delta_t = t[1] - t_last
-                t_last = t[1]
-                self.u_k[1] = -u[1]
+                self.u1.append(u[1])
+                self.t.append(t[1])
 
-            self.sum_t = self.sum_t + self.delta_t
-
-            self.plot_t.append(self.sum_t)
-            self.plot_y.append(self.y_k[0])
-            self.plot_v.append(self.y_k[1])
-
+    def kalman_filter(self):
+        for u0,u1,t in zip(np.diff(np.array(self.u0)),np.diff(np.array(self.u1)),np.diff(np.array(self.t))):
+            self.delta_t = t
+            self.u_k[0] = u0
+            self.u_k[1] = -u1
             self.time_update()
             self.set_gain()
             self.update()
             self.extrapolate()
-            #self.print_debug()
-
+            self.sum_t = self.sum_t + t
+            self.plot_y.append(self.y_k[0])
+            self.plot_v.append(self.y_k[1])
+            self.plot_t.append(self.sum_t)
+        self.print_debug()
         self.plot_output()
 
     def plot_output(self):
@@ -136,3 +131,4 @@ class SimpleKalman:
 if __name__ == '__main__':
     simple_kalman_np = SimpleKalman()
     simple_kalman_np.load_array()
+    simple_kalman_np.kalman_filter()
