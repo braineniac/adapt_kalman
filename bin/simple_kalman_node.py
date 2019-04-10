@@ -37,7 +37,7 @@ class SimpleKalmanNode:
         #################
 
         self.imu_sub = rospy.Subscriber("/imu/data_raw", Imu, self.imu_cb)
-        self.fake_enc_sub = rospy.Subscriber("/fake_wheel/twist_var", TwistWithCovarianceStamped, self.fake_enc_cb)
+        self.fake_enc_sub = rospy.Subscriber("/fake_wheel/twist", TwistWithCovarianceStamped, self.fake_enc_cb)
         self.odom_pub = rospy.Publisher("/simple_kalman/odom", Odometry, queue_size=1)
 
         self.begin_time = rospy.Time(0.0)
