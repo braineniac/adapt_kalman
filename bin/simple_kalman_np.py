@@ -22,8 +22,7 @@ class SimpleKalman:
         self.y_k = np.zeros((2,1))          # output
         self.u_k = np.zeros((2,1))          # control vector
 
-        self.u0 = []
-        self.u1 = []
+        self.u = [[],[]]
         self.t = []
 
         self.delta_t = 0.0
@@ -67,23 +66,21 @@ class SimpleKalman:
         self.P_k_pre = self.P_k_extr
 
     def load_array(self):
-        t_last = 0.0
-        u_k_last = np.array([0.0,0.0])
         data = np.load("/home/dan/ros/src/simple_kalman/numpy/straight.npy")
 
         for u,t in zip(data[0],data[1]):
 
-            np.append(self.u0,np.array([u[0]]))
+            np.append(self.u[0],np.array([u[0]]))
             if t[0] != 0.0:
-                self.u0.append(u[0])
+                self.u[0].append(u[0])
                 self.t.append(t[0])
 
             if t[1] != 0.0:
-                self.u1.append(u[1])
+                self.u[1].append(u[1])
                 self.t.append(t[1])
 
     def kalman_filter(self):
-        for u0,u1,t in zip(np.diff(np.array(self.u0)),np.diff(np.array(self.u1)),np.diff(np.array(self.t))):
+        for u0,u1,t in zip(np.diff(np.array(self.u[0])),np.diff(np.array(self.u[1])),np.diff(np.array(self.t))):
             self.delta_t = t
             self.u_k[0] = u0
             self.u_k[1] = -u1
