@@ -38,7 +38,7 @@ class SimpleKalman:
         #imu_stdev = (400/1000000) * 9.80655
         #fake_enc_stdev = (400/1000000) * 9.80655 / 100.0
         imu_stdev = 0.5
-        fake_enc_stdev = 0.01
+        fake_enc_stdev = 0.5
         self.R_k[0][0] = self.small_val
         self.R_k[1][1] = imu_stdev*imu_stdev
         self.Q_k[0][0] = self.small_val
@@ -72,18 +72,15 @@ class SimpleKalman:
         self.P_k_pre = self.P_k_extr
 
     def load_array(self):
-        data = np.load("/home/dan/ros/src/simple_kalman/numpy/straight.npy")
+        data = np.load("/home/dan/ros/src/simple_kalman/numpy/straight_dmp.npy")
 
-        for u,t in zip(data[0],data[1]):
-
-            np.append(self.u[0],np.array([u[0]]))
-            if t[0] != 0.0:
-                self.u[0].append(u[0])
-                self.t.append(t[0])
-
-            if t[1] != 0.0:
-                self.u[1].append(u[1])
-                self.t.append(t[1])
+        u,t = zip(data[0],data[1])
+        for u0,u1,t0,t1 in zip(u[0],u[1],t[0],t[1]):
+            print(u)
+            self.u[0].append(u0)
+            self.t.append(t1)
+            self.u[1].append(u1)
+            self.t.append(t1)
 
     def kalman_filter(self):
         for u0,u1,t in zip(np.array(self.u[0]),np.array(self.u[1]),np.diff(np.array(self.t))):
@@ -101,7 +98,7 @@ class SimpleKalman:
             self.plot_v.append(self.x_k_pre[1])
             self.plot_a.append(-u1)
             self.plot_t.append(self.sum_t)
-        self.print_debug()
+            #self.print_debug()
         self.plot_output()
 
     def plot_output(self):
