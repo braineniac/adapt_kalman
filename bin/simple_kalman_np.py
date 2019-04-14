@@ -1,8 +1,11 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import rosbag
+import argparse
 
 class SimpleKalman:
-    def __init__(self):
+    def __init__(self, path_bag):
+        self.path_bag = path_bag
 
         self.small_val = np.exp(-20)
         self.delta_t = 0.0
@@ -15,6 +18,7 @@ class SimpleKalman:
 
         self.u = [[],[]]
         self.t = []
+        self.input = []
 
         self.L_k = np.zeros((2,2))          # Kalman gain
         self.P_k_pre = np.random.normal(self.small_val,1.0,(2,2))      # A priori covariance
@@ -61,7 +65,6 @@ class SimpleKalman:
         F = self.y_k - self.C_k.dot(self.x_k_pre) - self.D_k.dot(self.u_k)
         self.x_k_post = self.x_k_pre + self.L_k.dot(F)
         self.P_k_post = (np.identity(2) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
-        #self.y_k = self.C_k.dot(self.x_k_post)
 
     def extrapolate(self):
         self.x_k_extr = self.phi_k.dot(self.x_k_post) + self.gamma_k.dot(self.u_k)
@@ -71,19 +74,15 @@ class SimpleKalman:
         self.x_k_pre = self.x_k_extr
         self.P_k_pre = self.P_k_extr
 
-    def load_array(self):
-        data = np.load("/home/dan/ros/src/simple_kalman/numpy/straight_dmp.npy")
-
-        u,t = zip(data[0],data[1])
-        for u0,u1,t0,t1 in zip(u[0],u[1],t[0],t[1]):
-            print(u)
+    def sort2np(self):
+        sorted_input = sorted(self.input,key=lambda elem : elem[0])
+        for t,u0,u1 in sorted_input:
             self.u[0].append(u0)
-            self.t.append(t1)
             self.u[1].append(u1)
-            self.t.append(t1)
+            self.t.append(t)
 
     def kalman_filter(self):
-        for u0,u1,t in zip(np.array(self.u[0]),np.array(self.u[1]),np.diff(np.array(self.t))):
+        for u0,u1,t in zip(self.u[0],self.u[1], np.diff(np.array(self.t))):
             self.delta_t = t
             self.u_k[0] = 0
             self.u_k[1] = u0
@@ -94,11 +93,11 @@ class SimpleKalman:
             self.update()
             self.extrapolate()
             self.sum_t = self.sum_t + t
+            #print(u0,u1,t)
             self.plot_y.append(self.x_k_pre[0])
             self.plot_v.append(self.x_k_pre[1])
             self.plot_a.append(-u1)
             self.plot_t.append(self.sum_t)
-            #self.print_debug()
         self.plot_output()
 
     def plot_output(self):
@@ -121,24 +120,29 @@ class SimpleKalman:
         plt.plot(self.plot_t,self.plot_a)
         plt.show()
 
-    def print_debug(self):
-
-        #print("y={}".format(self.plot_y))
-        #print("t={}".format(self.plot_t))
-        np.set_printoptions(precision=32)
-        #print("State: {}".format(self.x_k_pre))
-        #print("Covariance: {}".format(self.P_k_pre))
-        #print("Gamma: {}".format(self.gamma_k))
-        #print("C: {}".format(self.C_k))
-        #print("Kalman gain: {}".format(self.L_k))
-        #print("Posteriori state: {}".format(self.x_k_post))
-        #print("Posteriori covariance: {}".format(self.P_k_post))
-        #print("Extrapolated state: {}".format(self.x_k_extr))
-        #print("Extrapolated covariance: {}".format(self.P_k_extr))
-        #print("Output: {}".format(self.y_k))
-        #print("u_k: {}".format(self.u_k))
+    def read_bag(self):
+        bag = rosbag.Bag(self.path_bag)
+        imu_msgs = bag.read_messages(topics=['/imu/data_raw'])
+        twist_msgs = bag.read_messages(topics=['/fake_wheel/twist'])
+        last_vel = 0.0
+        last_accel = 0.0
+        for imu_msg,twist_msg in zip(imu_msgs,twist_msgs):
+            imu_t = imu_msg.message.header.stamp.to_sec()
+            twist_t = twist_msg.message.header.stamp.to_sec()
+            imu_a_x = imu_msg.message.linear_acceleration.x
+            twist_l_x = twist_msg.message.twist.twist.linear.x
+            if last_vel != twist_l_x:
+                self.input.append((twist_t,twist_l_x,last_accel))
+                last_vel = twist_l_x
+            if last_accel != imu_a_x:
+                self.input.append((imu_t,last_vel,imu_a_x))
+                last_accel = imu_a_x
+        self.sort2np()
 
 if __name__ == '__main__':
-    simple_kalman_np = SimpleKalman()
-    simple_kalman_np.load_array()
+    parser = argparse.ArgumentParser(description="Process rosbag through a kalman filter")
+    parser.add_argument("bag", help="Rosbag path")
+    args = parser.parse_args()
+    simple_kalman_np = SimpleKalman(args.bag)
+    simple_kalman_np.read_bag()
     simple_kalman_np.kalman_filter()
