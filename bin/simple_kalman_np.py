@@ -13,8 +13,10 @@ class SimpleKalman:
         self.sum_t = 0.0
         self.plot_t = []
         self.plot_y = []
-        self.plot_v = []
+        self.plot_v_post = []
+        self.plot_v_pre = []
         self.plot_a = []
+        self.plot_accel = []
 
         self.u = [[],[]]
         self.t = []
@@ -83,6 +85,10 @@ class SimpleKalman:
 
     def kalman_filter(self):
         for u0,u1,t in zip(self.u[0],self.u[1], np.diff(np.array(self.t))):
+            # exclude weird data at the end of the rosbag
+            if t>0.5:
+                continue
+            self.plot_v_pre.append(self.x_k_pre[1])
             self.delta_t = t
             self.u_k[0] = 0
             self.u_k[1] = u0
@@ -93,31 +99,42 @@ class SimpleKalman:
             self.update()
             self.extrapolate()
             self.sum_t = self.sum_t + t
-            #print(u0,u1,t)
-            self.plot_y.append(self.x_k_pre[0])
-            self.plot_v.append(self.x_k_pre[1])
-            self.plot_a.append(-u1)
+            self.plot_y.append(self.x_k_post[0])
+            self.plot_v_post.append(self.x_k_post[1])
+            self.plot_a = np.append(self.plot_a,[u1])
             self.plot_t.append(self.sum_t)
+
+        self.plot_accel = self.plot_a[1:-2] + self.plot_a[0:-3] + self.plot_a[2:-1]
+        #self.plot_a = np.convolve(self.plot_a,np.random.normal(0.14,0.05,np.ndarray.size(self.plot_a)))
         self.plot_output()
 
     def plot_output(self):
-        plt.subplot(131)
+#        plt.subplot(131)
+        plt.figure(1)
         plt.title("Kalman filter x state")
         plt.ylabel("Distance travelled in m")
         plt.xlabel("Time in sec")
         plt.plot(self.plot_t, self.plot_y)
 
-        plt.subplot(132)
-        plt.title("Kalman filter ẋ state")
-        plt.xlabel("Time in sec")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.plot_t,self.plot_v)
+#        plt.subplot(132)
+#        plt.figure(2)
+#        plt.title("Kalman filter ẋ before state")
+#        plt.xlabel("Time in sec")
+#        plt.ylabel("Velocity in m/s")
+#        plt.plot(self.plot_t,self.plot_v_pre)
 
-        plt.subplot(133)
+#        plt.figure(3)
+#        plt.title("Kalman filter ẋ after state")
+#        plt.xlabel("Velocity in m/s")
+#        plt.xlabel("Time in sec")
+#        plt.plot(self.plot_t,self.plot_v_post)
+
+#        plt.subplot(133)
+        plt.figure(4)
         plt.title("Imu data")
         plt.xlabel("Time in sec")
         plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.plot_t,self.plot_a)
+        plt.plot(self.plot_t[1:-2],self.plot_accel)
         plt.show()
 
     def read_bag(self):
