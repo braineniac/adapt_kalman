@@ -16,7 +16,7 @@ class SimpleKalmanSim:
         self.gauss = np.exp(-(x/sigma)**2/2)
         self.conv = None
         self.accel = None
-        self.kalman = SimpleKalman(0.05,5)
+        self.kalman = SimpleKalman(100,5)
 
     def plot_all(self):
         plt.figure(1)
@@ -45,7 +45,7 @@ class SimpleKalmanSim:
 
     def simulate_input(self):
         self.conv = np.convolve(self.vel,self.gauss/self.gauss.sum(), mode="same")
-        self.accel = 10*np.gradient(self.conv)
+        self.accel = 100*np.gradient(self.conv)
         #self.plot_all()
 
     def run_filter(self):

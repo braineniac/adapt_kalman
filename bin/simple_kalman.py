@@ -96,25 +96,19 @@ class SimpleKalman:
     def plot_all(self):
         plt.figure(1)
 
-        plt.subplot(221)
+        plt.subplot(311)
         plt.title("Robot distance")
         plt.xlabel("Time in s")
         plt.ylabel("Distance in m")
         plt.plot(self.plot_t,self.plot_y)
 
-        plt.subplot(222)
-        plt.title("Robot velocity pre")
-        plt.xlabel("Time in x")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.plot_t,self.plot_v_pre)
-
-        plt.subplot(223)
+        plt.subplot(312)
         plt.title("Robot velocity post")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.plot_t,self.plot_v_post)
 
-        plt.subplot(224)
+        plt.subplot(313)
         plt.title("Robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")

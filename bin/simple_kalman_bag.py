@@ -26,7 +26,6 @@ class SimpleKalmanBag:
             twist_t = twist_msg.message.header.stamp.to_sec()
             imu_a_x = imu_msg.message.linear_acceleration.x
             twist_l_x = twist_msg.message.twist.twist.linear.x
-            print(twist_t)
             if last_vel != twist_l_x:
                 self.input.append((twist_t,twist_l_x,last_accel))
                 last_vel = twist_l_x
@@ -52,7 +51,7 @@ class SimpleKalmanBag:
         plt.title("Imu data")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.t,self.u[1], "k,-")
+        plt.plot(self.t,self.u[1])
 
         plt.subplot(122)
         plt.title("Fake wheel encoder")
