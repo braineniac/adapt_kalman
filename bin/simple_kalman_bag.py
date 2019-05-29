@@ -4,6 +4,7 @@
 import numpy as np
 from scipy import signal
 from matplotlib import pyplot as plt
+plt.subplots_adjust(hspace=0.5)
 import rosbag
 import argparse
 from simple_kalman import SimpleKalman
@@ -12,14 +13,12 @@ class SimpleKalmanBag:
     def __init__(self,bag_path=None):
         self.bag_path = bag_path
         self.bag = rosbag.Bag(bag_path)
-        self.kalman = SimpleKalman(1000,5)
+        self.kalman = SimpleKalman(100,0.1)
 
         self.u = [[],[]]
         self.t = []
         self.imu = []
-        self.t_imu = []
         self.twist = []
-        self.t_twist = []
 
     def read_imu(self, topic):
         msgs = self.bag.read_messages(topics=topic)
@@ -55,21 +54,37 @@ class SimpleKalmanBag:
             self.kalman.filter(u,t)
 
     def plot_all(self):
-        plt.figure(2)
+        plt.figure(1)
 
-        plt.subplot(211)
-        plt.title("Imu data")
-        plt.xlabel("Time in s")
-        plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.t, self.u[1])
-
-        plt.subplot(212)
+        plt.subplot(511)
         plt.title("Fake wheel encoder")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity")
         plt.plot(self.t, self.u[0])
 
-        self.kalman.plot_all()
+        plt.subplot(512)
+        plt.title("Imu data")
+        plt.xlabel("Time in s")
+        plt.ylabel("Acceleration in m/s^2")
+        plt.plot(self.t, self.u[1])
+
+        plt.subplot(513)
+        plt.title("Robot distance")
+        plt.xlabel("Time in s")
+        plt.ylabel("Distance in m")
+        plt.plot(self.kalman.plot_t,self.kalman.plot_y)
+
+        plt.subplot(514)
+        plt.title("Robot velocity")
+        plt.xlabel("Time in s")
+        plt.ylabel("Velocity in m/s")
+        plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+
+        plt.subplot(515)
+        plt.title("Robot acceleration")
+        plt.xlabel("Time in s")
+        plt.ylabel("Acceleration in m/s^2")
+        plt.plot(self.kalman.plot_t, self.kalman.plot_a)
 
         plt.show()
 

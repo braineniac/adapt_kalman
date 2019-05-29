@@ -3,15 +3,16 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
+plt.subplots_adjust(hspace=0.5)
 from simple_kalman import SimpleKalman
 
 class SimpleKalmanSim:
 
-    def __init__(self, N=1000, sim_time=5.0, peak_vel=1.14):
+    def __init__(self, N=1000, sim_time=5.0, peak_vel=0.14):
         self.t = np.linspace(0,sim_time,N)
         self.vel = self.set_vel(sim_time,peak_vel,N)
         self.accel = self.set_accel(sim_time,N)
-        self.kalman = SimpleKalman(1000,5)
+        self.kalman = SimpleKalman(1,3)
 
     def set_vel(self,sim_time,peak_vel, N):
         t = self.t
@@ -19,19 +20,37 @@ class SimpleKalmanSim:
         return box_function
 
     def plot_all(self):
-        plt.figure(2)
+        plt.figure(1)
 
-        plt.subplot(211)
+        plt.subplot(511)
         plt.title("Simulated robot velocity")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.t,self.vel)
 
-        plt.subplot(212)
+        plt.subplot(512)
         plt.title("Simulated robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
         plt.plot(self.t,self.accel)
+
+        plt.subplot(513)
+        plt.title("Robot distance")
+        plt.xlabel("Time in s")
+        plt.ylabel("Distance in m")
+        plt.plot(self.kalman.plot_t,self.kalman.plot_y)
+
+        plt.subplot(514)
+        plt.title("Robot velocity post")
+        plt.xlabel("Time in s")
+        plt.ylabel("Velocity in m/s")
+        plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+
+        plt.subplot(515)
+        plt.title("Robot acceleration")
+        plt.xlabel("Time in s")
+        plt.ylabel("Acceleration in m/s^2")
+        plt.plot(self.kalman.plot_t, self.kalman.plot_a)
 
         plt.show()
 
@@ -40,17 +59,17 @@ class SimpleKalmanSim:
         x = np.linspace(-sim_time/2.0,sim_time/2.0,N)
         gauss = np.exp(-(x/sigma)**2/2)
         conv = np.convolve(self.vel,gauss/gauss.sum(), mode="same")
-        grad = 100*np.gradient(conv)
-        noise = np.random.normal(0,6,N)
-        offset = 1.5
-        return grad + noise + offset
+        grad = 50*np.gradient(conv)
+        grad_shift = 0.7 * np.roll(grad,10)
+        noise = np.random.normal(0,0.2,N)
+        offset = 0.3
+        return grad + grad_shift + noise + offset
 
     def run_filter(self):
         for u,t in zip(zip(self.vel,self.accel), np.diff(self.t)):
             self.kalman.filter(u,t)
-        self.kalman.plot_all()
-        self.plot_all()
 
 if __name__ == '__main__':
     simple_kalman_sim = SimpleKalmanSim()
     simple_kalman_sim.run_filter()
+    simple_kalman_sim.plot_all()
