@@ -4,6 +4,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 plt.subplots_adjust(hspace=0.5)
+import matplotlib2tikz
 from simple_kalman import SimpleKalman
 
 class SimpleKalmanSim:
@@ -21,38 +22,42 @@ class SimpleKalmanSim:
 
     def plot_all(self):
         plt.figure(1)
-
-        plt.subplot(511)
-        plt.title("Simulated robot velocity")
+        #plt.title("Simulated robot velocity")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.t,self.vel)
+        matplotlib2tikz.save("plots/input_vel_sim.tex",figureheight='4cm', figurewidth='6cm')
 
-        plt.subplot(512)
-        plt.title("Simulated robot acceleration")
+        plt.figure(2)
+        #plt.title("Simulated robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
         plt.plot(self.t,self.accel)
+        matplotlib2tikz.save("plots/input_accel_sim.tex",figureheight='4cm', figurewidth='6cm' )
 
-        plt.subplot(513)
-        plt.title("Robot distance")
+        plt.figure(3)
+        #plt.title("Robot distance")
         plt.xlabel("Time in s")
         plt.ylabel("Distance in m")
         plt.plot(self.kalman.plot_t,self.kalman.plot_y)
+        matplotlib2tikz.save("plots/robot_dist_sim.tex",figureheight='3cm', figurewidth='14cm' )
 
-        plt.subplot(514)
-        plt.title("Robot velocity post")
+        plt.figure(4)
+        #plt.title("Robot velocity post")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+        plt.ticklabel_format(axis='both', style='plain')
+        matplotlib2tikz.save("plots/robot_vel_sim.tex",figureheight='3cm', figurewidth='14cm' )
 
-        plt.subplot(515)
-        plt.title("Robot acceleration")
+        plt.figure(5)
+        #plt.title("Robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
         plt.plot(self.kalman.plot_t, self.kalman.plot_a)
+        matplotlib2tikz.save("plots/robot_accel_sim.tex",figureheight='3cm', figurewidth='14cm' )
 
-        plt.show()
+        #plt.show()
 
     def set_accel(self,sim_time,N):
         sigma = 0.01
