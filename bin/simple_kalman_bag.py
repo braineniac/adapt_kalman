@@ -13,7 +13,7 @@ class SimpleKalmanBag:
     def __init__(self,bag_path=None):
         self.bag_path = bag_path
         self.bag = rosbag.Bag(bag_path)
-        self.kalman = SimpleKalman(100,0.1)
+        self.kalman = SimpleKalman(ratio=1/3.)
 
         self.u = [[],[]]
         self.t = []
@@ -51,40 +51,54 @@ class SimpleKalmanBag:
 
     def run_filter(self):
         for u,t in zip(zip(self.u[0],self.u[1]), np.diff(self.t)):
-            self.kalman.filter(u,t)
+            self.kalman.filter(u,t,4)
 
     def plot_all(self):
         plt.figure(1)
 
-        plt.subplot(511)
+        plt.subplot(611)
         plt.title("Fake wheel encoder")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity")
         plt.plot(self.t, self.u[0])
 
-        plt.subplot(512)
-        plt.title("Imu data")
-        plt.xlabel("Time in s")
-        plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.t, self.u[1])
+        # plt.subplot(512)
+        # plt.title("Imu data")
+        # plt.xlabel("Time in s")
+        # plt.ylabel("Acceleration in m/s^2")
+        # plt.plot(self.t, self.u[1])
 
-        plt.subplot(513)
+        plt.subplot(612)
         plt.title("Robot distance")
         plt.xlabel("Time in s")
         plt.ylabel("Distance in m")
         plt.plot(self.kalman.plot_t,self.kalman.plot_y)
 
-        plt.subplot(514)
+        plt.subplot(613)
         plt.title("Robot velocity")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
 
-        plt.subplot(515)
+        plt.subplot(614)
         plt.title("Robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
         plt.plot(self.kalman.plot_t, self.kalman.plot_a)
+
+        plt.subplot(615)
+        plt.title("Coeff")
+        #plt.xticks(np.arange(0, len(self.kalman.plot_t[30:]), step=0.2))
+        fill = len(self.kalman.plot_t) - len(self.kalman.coeff_array)
+        full_coeff_array = np.insert(self.kalman.coeff_array,0, np.ones(fill))
+        plt.plot(self.kalman.plot_t,full_coeff_array)
+
+        plt.subplot(616)
+        plt.title("Ratio")
+        #plt.xticks(np.arange(0, len(self.kalman.plot_t[30:]), step=0.2))
+        fill = len(self.kalman.plot_t) - len(self.kalman.ratio_a)
+        full_ratio_array = np.insert(self.kalman.ratio_a, 0, np.full((fill),self.kalman.ratio))
+        plt.plot(self.kalman.plot_t,full_ratio_array)
 
         plt.show()
 
