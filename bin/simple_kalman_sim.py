@@ -9,11 +9,17 @@ from simple_kalman import SimpleKalman
 
 class SimpleKalmanSim:
 
-    def __init__(self, N=1000, sim_time=5.0, peak_vel=0.14, ratio=1/3):
+    def __init__(self, N=200,
+                       sim_time=5.0,
+                       peak_vel=0.14,
+                       ratio=1/3,
+                       window="sig",
+                       window_size=4,
+                       adapt=False):
         self.t = np.linspace(0,sim_time,N)
         self.vel = self.set_vel(sim_time,peak_vel,N)
         self.accel = self.set_accel(sim_time,N)
-        self.kalman = SimpleKalman(ratio)
+        self.kalman = SimpleKalman(ratio,window,window_size,adapt)
 
     def set_vel(self,sim_time,peak_vel, N):
         t = self.t
@@ -44,7 +50,7 @@ class SimpleKalmanSim:
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         #plt.xticks(np.arange(0, xticks, step=0.2))
-        plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+        plt.plot(self.kalman.plot_t,self.kalman.plot_v)
 
         plt.subplot(614)
         plt.title("Robot acceleration")
@@ -62,8 +68,8 @@ class SimpleKalmanSim:
         plt.subplot(615)
         plt.title("Coeff")
         #plt.xticks(np.arange(0, len(self.kalman.plot_t[30:]), step=0.2))
-        fill = len(self.kalman.plot_t) - len(self.kalman.coeff_array)
-        full_coeff_array = np.insert(self.kalman.coeff_array,0, np.ones(fill))
+        fill = len(self.kalman.plot_t) - len(self.kalman.coeff_a)
+        full_coeff_array = np.insert(self.kalman.coeff_a,0, np.ones(fill))
         plt.plot(self.kalman.plot_t,full_coeff_array)
 
         plt.subplot(616)
@@ -97,7 +103,7 @@ class SimpleKalmanSim:
         plt.figure(4)
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
-        plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+        plt.plot(self.kalman.plot_t,self.kalman.plot_v)
         plt.ticklabel_format(axis='both', style='plain')
         matplotlib2tikz.save("plots/robot_vel_sim.tex",figureheight='3cm', figurewidth='14cm' )
 
@@ -127,7 +133,7 @@ class SimpleKalmanSim:
         grad = 50*np.gradient(conv)
         grad_shift = 0.7 * np.roll(grad,10)
         noise_still = np.random.normal(0,0.05,N)
-        noise_moving = self.get_noise_moving(5)
+        noise_moving = self.get_noise_moving(3)
         offset = 0.3
 
         accel += grad
@@ -140,7 +146,7 @@ class SimpleKalmanSim:
 
     def run_filter(self):
         for u,t in zip(zip(self.vel,self.accel), np.diff(self.t)):
-            self.kalman.filter(u,t,10)
+            self.kalman.filter(u,t)
 
 if __name__ == '__main__':
     simple_kalman_sim = SimpleKalmanSim()

@@ -13,7 +13,7 @@ class SimpleKalmanBag:
     def __init__(self,bag_path=None):
         self.bag_path = bag_path
         self.bag = rosbag.Bag(bag_path)
-        self.kalman = SimpleKalman(ratio=1/3.)
+        self.kalman = SimpleKalman(ratio=1/3.,window="exp",window_size=5, adapt=True)
 
         self.u = [[],[]]
         self.t = []
@@ -51,7 +51,7 @@ class SimpleKalmanBag:
 
     def run_filter(self):
         for u,t in zip(zip(self.u[0],self.u[1]), np.diff(self.t)):
-            self.kalman.filter(u,t,4)
+            self.kalman.filter(u,t)
 
     def plot_all(self):
         plt.figure(1)
@@ -60,7 +60,7 @@ class SimpleKalmanBag:
         plt.title("Fake wheel encoder")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity")
-        plt.plot(self.t, self.u[0])
+        plt.plot(self.kalman.plot_t, self.kalman.plot_u0)
 
         # plt.subplot(512)
         # plt.title("Imu data")
@@ -78,7 +78,7 @@ class SimpleKalmanBag:
         plt.title("Robot velocity")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
-        plt.plot(self.kalman.plot_t,self.kalman.plot_v_post)
+        plt.plot(self.kalman.plot_t,self.kalman.plot_v)
 
         plt.subplot(614)
         plt.title("Robot acceleration")
@@ -89,8 +89,8 @@ class SimpleKalmanBag:
         plt.subplot(615)
         plt.title("Coeff")
         #plt.xticks(np.arange(0, len(self.kalman.plot_t[30:]), step=0.2))
-        fill = len(self.kalman.plot_t) - len(self.kalman.coeff_array)
-        full_coeff_array = np.insert(self.kalman.coeff_array,0, np.ones(fill))
+        fill = len(self.kalman.plot_t) - len(self.kalman.coeff_a)
+        full_coeff_array = np.insert(self.kalman.coeff_a,0, np.ones(fill))
         plt.plot(self.kalman.plot_t,full_coeff_array)
 
         plt.subplot(616)

@@ -10,37 +10,30 @@ import pandas as pd
 from fractions import Fraction
 
 class SimpleKalman:
-    def __init__(self, ratio=1/10):
+    def __init__(self, ratio=1/10, window="sig", window_size=10, adapt=True):
         small_val = np.exp(-20)
         # set initial covariance
         #imu_stdev = (400/1000000) * 9.80655
-        #fake_enc_stdev = (400/1000000) * 9.80655 / 100.0
+        #fake_enc_stdev = (400/1000000) * 9.80655 / 100.
 
-        self.ratio = Fraction(ratio).limit_denominator(200)
-        fake_enc_stdev = self.ratio.numerator
-        imu_stdev = self.ratio.denominator
+        self.use_adapt = adapt
+        self.window_list = ["sig", "exp"]
+        self.window = window
+        self.window_size = window_size
+
+        self.ratio = ratio
+        fake_enc_stdev, imu_stdev = self.decomp_fraction(ratio)
 
         self.u = None
         self.t = 0
 
         self.delta_t = 0.0
-        self.sum_t = 0.0
-        self.plot_t = []
-        self.plot_y = []
-        self.plot_v_post = []
-        self.plot_v_pre = []
-        self.plot_u0 = []
-        self.plot_a = []
-        self.test_a = []
-
-
-        self.ratio_a = []
-        self.coeff_array = []
         self.last_array = []
         self.peak = 0
 
         self.L_k = np.zeros((2,2))                                  # Kalman gain
-        self.P_k_pre = np.random.normal(small_val,1.0,(2,2))        # A priori covariance
+        #self.P_k_pre = np.random.normal(small_val,1.0,(2,2))        # A priori covariance
+        self.P_k_pre = np.zeros((2,2))
         self.P_k_post = np.zeros((2,2))                             # A posteriori covariance
         self.C_k = np.zeros(2)
         self.x_k_post = np.zeros((2,1))
@@ -65,6 +58,16 @@ class SimpleKalman:
         self.H_k[1][1] = 1
         self.G_k[1][1] = 1
 
+        #  arrays for plotting
+        self.sum_t = 0.0
+        self.plot_t = []
+        self.plot_y = []
+        self.plot_v = []
+        self.plot_u0 = []
+        self.plot_a = []
+        self.ratio_a = []
+        self.coeff_a = []
+
     def time_update(self):
         self.D_k = np.array([[0,0],[0,self.delta_t]])
         self.phi_k = np.array([[1,self.delta_t],[0,0]])
@@ -88,53 +91,31 @@ class SimpleKalman:
         self.x_k_pre = self.x_k_extr
         self.P_k_pre = self.P_k_extr
 
-    def filter(self, u,t,N=10):
-        self.plot_v_pre.append(self.x_k_pre[1])
+    def filter(self, u,t):
+
         self.delta_t = t
         self.u_k[0] = 0
         self.u_k[1] = u[0]
         self.y_k[0] = 0
         self.y_k[1] = u[1]
 
-        self.adapt_covar(N)
+        if self.use_adapt:
+            self.adapt_covar()
+
         self.time_update()
         self.set_gain()
         self.update()
         self.extrapolate()
 
+        # append to arrays for plotting
         self.sum_t = self.sum_t + t
         self.plot_y.append(self.x_k_post[0])
-        self.plot_v_post.append(self.x_k_post[1])
+        self.plot_v.append(self.x_k_post[1])
         self.plot_u0 = np.append(self.plot_u0, [u[0]])
         self.plot_a = np.append(self.plot_a,[u[1]])
         self.plot_t.append(self.sum_t)
 
-    def get_abs_array(self, array = []):
-        if array == []:
-            return None
-
-        array_pos = []
-        for x in array:
-            if x < 0:
-                x = -x
-            array_pos.append(x)
-        return array_pos
-
-    # def get_diff_sum(self, array = [], N=0):
-    #     if array == []:
-    #         return None
-    #
-    #     np_array = np.array(array).reshape((1,N))[0]
-    #     #print(np_array)
-    #     #array_diff = np.diff(np_array)
-    #     #print(array_diff)
-    #     #array_pos = self.get_abs_array(array_diff)
-    #     #print(array_pos)
-    #     array_sum = np.sum(np_array)
-    #     if array_sum < 1.0e-10:
-    #         array_sum = 1.0e-10
-    #
-    #     return array_sum
+        #self.print_debug()
 
     def get_current_N(self, N):
         array = []
@@ -157,84 +138,86 @@ class SimpleKalman:
         for j in range(n):
             newarray[j] = array[j]*w[j] / np.sum(w)
 
-        #plt.figure(3)
-        #plt.plot(x,w)
-        #plt.show()
-
         return np.sum(newarray)
 
+    def exponential_avg(self,array):
+        series = pd.Series(array)
+        avg = np.average(series.ewm(span=len(array)).mean().values)
+        return avg
 
-    def adapt_covar(self, N=0):
+    def adapt_covar(self):
+        N = self.window_size
         if len(self.plot_u0) == N:
             self.last_array = self.get_current_N(N)
 
         elif len(self.plot_u0) >= 2*N:
             current_array = self.get_current_N(N)
             last_array = self.last_array
-            # last_diff_sum = self.get_diff_sum(last_array, N)
-            # current_diff_sum = self.get_diff_sum(current_array,N)
 
-            last_series = pd.Series(last_array)
-            current_series = pd.Series(current_array)
+            if self.window in self.window_list:
+                if self.window == "exp":
+                    current_avg = self.exponential_avg(current_array)
+                    last_avg = self.exponential_avg(last_array)
 
-            current_avg = np.average(current_series.ewm(span=N).mean().values)
-            last_avg = np.average(last_series.ewm(span=N).mean().values)
-#############################################################################
-            test_current_series = pd.Series(current_array)
-            test_last_series = pd.Series(last_array)
-            test_current_series_flip = pd.Series(np.flip(current_array))
-            test_last_series_flip = pd.Series(np.flip(last_array))
+                elif self.window == "sig":
+                    current_avg = self.sigmoid_mirror_avg(current_array)
+                    last_avg = self.sigmoid_mirror_avg(last_array)
 
-            test_current_avg = np.average(test_current_series.ewm( alpha=0.001).mean().values)
-            test_last_avg = np.average(test_last_series.ewm(span=N).mean().values)
-            test_current_avg_flip = np.average(test_current_series_flip.ewm(span=N).mean().values)
-            test_last_avg_flip = np.average(test_last_series_flip.ewm(span=N).mean().values)
-            test_diff = abs(test_current_avg - test_last_avg)
-            test_diff_flip = abs(test_current_avg_flip - test_last_avg_flip)
+            avg_diff = abs(current_avg - last_avg)
 
-            current_sig = self.sigmoid_mirror_avg(current_array)
-            last_sig = self.sigmoid_mirror_avg(last_array)
-            #print("$$$$$$$$$$$$$$$$$$$$$$$$")
-            #print(current_sig)
-            #print(last_sig)
-            #print(abs(current_sig - last_sig))
-            #self.test_a.append(current_sig - last_sig)
-##############################################################################
-            avg_diff = abs(current_sig - last_sig)
+            # set the biggest peak detected
             peak = avg_diff
             if peak > self.peak:
                 self.peak = peak
-
             if self.peak != 0:
                 k = (np.reciprocal(self.ratio) - 1) / self.peak
             else:
                 k = 0
+
+            # offset by 1 and scale with max peak
             coeff = avg_diff * k + 1
 
-            self.coeff_array.append(coeff)
-            self.ratio_a.append(self.ratio * coeff)
-
-            new_ratio = Fraction(self.ratio * coeff).limit_denominator(200)
-
-            num_len = len(str(new_ratio.numerator))
-            denum_len = len(str(new_ratio.denominator))
-            if num_len > denum_len:
-                dec_shift = num_len
-            else:
-                dec_shift = denum_len
-
-            u0_stdev = new_ratio.numerator / (10.**dec_shift)
-            u1_stdev = new_ratio.denominator / (10.**dec_shift)
-            # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-            # print("coeff: {}".format(coeff))
-            # print("u0 stdev: {}".format(u0_stdev))
-            # print("u1 stdev: {}".format(u1_stdev))
-            # print("last diff sum: {}".format(last_diff_sum))
-            # print("current diff sum: {}".format(current_diff_sum))
+            # update covariances
+            u0_stdev,u1_stdev = self.decomp_fraction(self.ratio * coeff)
             self.Q_k[1][1] = u0_stdev*u0_stdev
             self.R_k[1][1] = u1_stdev*u1_stdev
 
+            # update for next iteration
             self.last_array = current_array
+
+            # append for plotting
+            self.coeff_a.append(coeff)
+            self.ratio_a.append(self.ratio * coeff)
+
+            if self.plot_v[-4] > 1:
+                exit(1)
+
+    def decomp_fraction(self, frac):
+        ratio = Fraction(frac).limit_denominator(200)
+
+        num_len = len(str(ratio.numerator))
+        denum_len = len(str(ratio.denominator))
+
+        if num_len > denum_len:
+            dec_shift = num_len
+        else:
+            dec_shift = denum_len
+
+        num = ratio.numerator / (10.**dec_shift)
+        denum = ratio.denominator / (10.**dec_shift)
+
+        return [num,denum]
+
+    def print_debug(self):
+        print("Vel:{}".format(self.plot_v[-1]))
+        print("Accel:{}".format(self.plot_a[-1]))
+        print("u0:{}".format(self.plot_u0[-1]))
+        #print("Coeff:{}".format(self.coeff_a[-1]))
+        #print("Ratio:{}".format(self.ratio_a[-1]))
+        print("Q_k:{}".format(self.Q_k[1][1]))
+        print("R_k:{}".format(self.R_k[1][1]))
+        print("P_k_pre:{}".format(self.P_k_pre))
+        print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
     def plot_all(self):
         plt.figure(1)
