@@ -216,8 +216,15 @@ class SimpleKalman:
 
             new_ratio = Fraction(self.ratio * coeff).limit_denominator(200)
 
-            u0_stdev = new_ratio.numerator
-            u1_stdev = new_ratio.denominator
+            num_len = len(str(new_ratio.numerator))
+            denum_len = len(str(new_ratio.denominator))
+            if num_len > denum_len:
+                dec_shift = num_len
+            else:
+                dec_shift = denum_len
+
+            u0_stdev = new_ratio.numerator / (10.**dec_shift)
+            u1_stdev = new_ratio.denominator / (10.**dec_shift)
             # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
             # print("coeff: {}".format(coeff))
             # print("u0 stdev: {}".format(u0_stdev))
