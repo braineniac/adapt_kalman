@@ -3,9 +3,10 @@
 
 import numpy as np
 from matplotlib import pyplot as plt
-plt.subplots_adjust(hspace=0.5)
+plt.subplots_adjust(hspace=1.5)
 import matplotlib2tikz
 from simple_kalman import SimpleKalman
+import argparse
 
 class SimpleKalmanSim:
 
@@ -113,6 +114,13 @@ class SimpleKalmanSim:
         plt.plot(self.kalman.plot_t, self.kalman.plot_a)
         matplotlib2tikz.save("plots/robot_accel_sim.tex",figureheight='3cm', figurewidth='14cm' )
 
+        plt.figure(6)
+        plt.xlabel("Time in s")
+        plt.ylabel("Ratio")
+        fill = len(self.kalman.plot_t) - len(self.kalman.ratio_a)
+        full_ratio_array = np.insert(self.kalman.ratio_a, 0, np.full((fill),self.kalman.ratio))
+        plt.plot(self.kalman.plot_t,full_ratio_array)
+
     def get_noise_moving(self, peak_coeff):
         noise_moving = []
         for x in self.vel:
@@ -149,6 +157,23 @@ class SimpleKalmanSim:
             self.kalman.filter(u,t)
 
 if __name__ == '__main__':
-    simple_kalman_sim = SimpleKalmanSim()
+    parser = argparse.ArgumentParser(description="Garry rosbag simulation")
+    parser.add_argument("-N", type=int, default=200, help="Number of points")
+    parser.add_argument("-t", "--sim_time", type=float, default=5.0, help="Simulation time span")
+    parser.add_argument("-p", "--peak_vel", type=float, default=0.14, help="Peak velocity")
+    parser.add_argument("-r", "--ratio", type=float, default=1/3., help="Covariance ratio")
+    parser.add_argument("-w", "--window", type=str, default="sig", help="Window type: sig or exp")
+    parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
+    parser.add_argument("-a", "--adapt", action="store_true", help="Use adaptive covariances")
+    args = parser.parse_args()
+    simple_kalman_sim = SimpleKalmanSim(
+        N=args.N,
+        sim_time=args.sim_time,
+        peak_vel=args.peak_vel,
+        ratio=args.ratio,
+        window=args.window,
+        window_size=args.window_size,
+        adapt=args.adapt
+    )
     simple_kalman_sim.run_filter()
     simple_kalman_sim.plot_all()
