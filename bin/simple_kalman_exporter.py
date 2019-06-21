@@ -81,27 +81,29 @@ class SimpleKalmanExporter:
     def plot_all(self):
 
         plt.figure(1)
+
+        plt.subplot(511)
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_u0)
 
-        plt.figure(2)
+        plt.subplot(512)
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
         plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_a)
 
-        plt.figure(3)
+        plt.subplot(513)
         plt.xlabel("Time in s")
         plt.ylabel("Distance in m")
         plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_y)
 
-        plt.figure(4)
+        plt.subplot(514)
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
         plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_v)
         plt.ticklabel_format(axis='both', style='plain')
 
-        plt.figure(5)
+        plt.subplot(515)
         plt.xlabel("Time in s")
         plt.ylabel("Ratio")
         fill = len(self.simple_kalman.kalman.plot_t) - len(self.simple_kalman.kalman.ratio_a)
