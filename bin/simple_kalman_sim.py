@@ -82,45 +82,6 @@ class SimpleKalmanSim:
 
         plt.show()
 
-    def export_plots(self):
-        plt.figure(1)
-        plt.xlabel("Time in s")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.t,self.vel)
-        matplotlib2tikz.save("plots/input_vel_sim.tex",figureheight='4cm', figurewidth='6cm')
-
-        plt.figure(2)
-        plt.xlabel("Time in s")
-        plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.t,self.accel)
-        matplotlib2tikz.save("plots/input_accel_sim.tex",figureheight='4cm', figurewidth='6cm' )
-
-        plt.figure(3)
-        plt.xlabel("Time in s")
-        plt.ylabel("Distance in m")
-        plt.plot(self.kalman.plot_t,self.kalman.plot_y)
-        matplotlib2tikz.save("plots/robot_dist_sim.tex",figureheight='3cm', figurewidth='14cm' )
-
-        plt.figure(4)
-        plt.xlabel("Time in s")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.kalman.plot_t,self.kalman.plot_v)
-        plt.ticklabel_format(axis='both', style='plain')
-        matplotlib2tikz.save("plots/robot_vel_sim.tex",figureheight='3cm', figurewidth='14cm' )
-
-        plt.figure(5)
-        plt.xlabel("Time in s")
-        plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.kalman.plot_t, self.kalman.plot_a)
-        matplotlib2tikz.save("plots/robot_accel_sim.tex",figureheight='3cm', figurewidth='14cm' )
-
-        plt.figure(6)
-        plt.xlabel("Time in s")
-        plt.ylabel("Ratio")
-        fill = len(self.kalman.plot_t) - len(self.kalman.ratio_a)
-        full_ratio_array = np.insert(self.kalman.ratio_a, 0, np.full((fill),self.kalman.ratio))
-        plt.plot(self.kalman.plot_t,full_ratio_array)
-
     def get_noise_moving(self, peak_coeff):
         noise_moving = []
         for x in self.vel:

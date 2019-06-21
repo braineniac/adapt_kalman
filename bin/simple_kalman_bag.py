@@ -10,10 +10,15 @@ import argparse
 from simple_kalman import SimpleKalman
 
 class SimpleKalmanBag:
-    def __init__(self,bag_path=None):
+    def __init__(self, bag_path=None,
+                       ratio=1/3.,
+                       window="sig",
+                       window_size=5,
+                       adapt=True
+                       ):
         self.bag_path = bag_path
         self.bag = rosbag.Bag(bag_path)
-        self.kalman = SimpleKalman(ratio=1/3.,window="exp",window_size=5, adapt=True)
+        self.kalman = SimpleKalman(ratio,window,window_size,adapt)
 
         self.u = [[],[]]
         self.t = []

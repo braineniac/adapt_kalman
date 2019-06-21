@@ -1,0 +1,7 @@
+matplotlib2tikz
+matplotlib
+numpy
+pandas
+pyyaml
+rospkg
+gnupg
