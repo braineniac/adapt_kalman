@@ -12,7 +12,7 @@ from simple_kalman_sim import SimpleKalmanSim
 class SimpleKalmanSimNode:
     def __init__(self, imu_out="/imu/data",
                        twist_out="/fake_wheel/twist",
-                       N=250,
+                       N=300,
                        ratio=1/3,
                        sim_time=10.0,
                        peak_vel=0.14):
@@ -21,8 +21,10 @@ class SimpleKalmanSimNode:
 
         self.simple_kalman_sim = SimpleKalmanSim(N=N, peak_vel=peak_vel, sim_time=sim_time)
 
-        self.twist_rate = (sim_time/N) / 10.
-        self.imu_rate = (sim_time/N)
+        rospy.loginfo("{}".format((N/sim_time)))
+
+        self.twist_freq = 10.
+        self.imu_freq = 50.
 
         self.sim_time = sim_time
         self.N = N
@@ -30,9 +32,10 @@ class SimpleKalmanSimNode:
         self.begin_time = rospy.get_rostime().to_sec()
 
     def set_pub_timers(self):
-        rospy.Timer(rospy.Duration(self.imu_rate), self.publish_imu)
-        rospy.Timer(rospy.Duration(self.twist_rate), self.publish_twist)
+        rospy.Timer(rospy.Duration(1/self.imu_freq), self.publish_imu)
+        rospy.Timer(rospy.Duration(1/self.twist_freq), self.publish_twist)
 
+    def check_shutdown(self):
         if rospy.get_rostime().to_sec() > (self.begin_time + self.sim_time):
             rospy.signal_shutdown("Simulation finished")
 
@@ -70,7 +73,8 @@ if __name__ == '__main__':
     rospy.loginfo("Initialising simple_kalman_sim_node")
     rospy.init_node("simple_kalman_sim_node")
     simple_kalman_sim_node = SimpleKalmanSimNode()
+    simple_kalman_sim_node.set_pub_timers()
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
-        simple_kalman_sim_node.set_pub_timers()
+        simple_kalman_sim_node.check_shutdown()
         rate.sleep()
