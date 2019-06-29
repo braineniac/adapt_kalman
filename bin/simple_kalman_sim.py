@@ -4,7 +4,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 plt.subplots_adjust(hspace=1.5)
-import matplotlib2tikz
 from simple_kalman import SimpleKalman
 import argparse
 
