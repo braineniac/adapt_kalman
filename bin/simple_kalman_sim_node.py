@@ -44,6 +44,7 @@ class SimpleKalmanSimNode:
 
         ros_time = rospy.get_rostime()
         imu_msg.header.stamp = ros_time
+        imu_msg.frame_id = "base_link"
 
         idx = self.find_nearest_time(ros_time.to_sec() - self.begin_time)
 
@@ -57,6 +58,7 @@ class SimpleKalmanSimNode:
 
         ros_time = rospy.get_rostime()
         twist_msg.header.stamp = ros_time
+        twist_msg.frame_id="base_link"
 
         idx = self.find_nearest_time(ros_time.to_sec() - self.begin_time)
 
