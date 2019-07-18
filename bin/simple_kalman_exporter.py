@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import matplotlib2tikz
 import argparse
 from matplotlib import pyplot as plt
 import numpy as np
@@ -115,38 +114,28 @@ class SimpleKalmanExporter:
     def export_plots(self):
 
         type = self.type_check()
+        b = 100
+        e = 50
 
-        plt.figure(1)
-        plt.xlabel("Time in s")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_u0)
-        matplotlib2tikz.save("plots/{}_input_vel.tex".format(type),figureheight='4cm', figurewidth='6cm')
+        new_t_array = []
+        for elem in self.simple_kalman.kalman.plot_t:
+            new_t_array.append(elem - self.simple_kalman.kalman.plot_t[b])
 
-        plt.figure(2)
-        plt.xlabel("Time in s")
-        plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_a)
-        matplotlib2tikz.save("plots/{}_input_accel.tex".format(type),figureheight='4cm', figurewidth='6cm' )
+        self.simple_kalman.kalman.plot_t = new_t_array
 
-        plt.figure(3)
-        plt.xlabel("Time in s")
-        plt.ylabel("Distance in m")
-        plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_y)
-        matplotlib2tikz.save("plots/{}_robot_dist.tex".format(type),figureheight='4cm', figurewidth='14cm' )
+        np.savetxt("plots/{}_input_vel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[b:-e], self.simple_kalman.kalman.plot_u0[b:-e]]) ,header='t u0', comments='# ',delimiter=' ', newline='\n')
 
-        plt.figure(4)
-        plt.xlabel("Time in s")
-        plt.ylabel("Velocity in m/s")
-        plt.plot(self.simple_kalman.kalman.plot_t,self.simple_kalman.kalman.plot_v)
-        matplotlib2tikz.save("plots/{}_robot_vel_{}.tex".format(type,self.window), figureheight='4cm', figurewidth='14cm' )
+        np.savetxt("plots/{}_input_accel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[b:-e], self.simple_kalman.kalman.plot_a[b:-e]]) ,header='t a', comments='# ',delimiter=' ', newline='\n')
 
-        plt.figure(5)
-        plt.xlabel("Time in s")
-        plt.ylabel("Ratio")
+        np.savetxt("plots/{}_robot_dist_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],self.simple_kalman.kalman.plot_y[b:-e]]) ,header='t y', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_robot_vel_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],self.simple_kalman.kalman.plot_v[b:-e]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
+
         fill = len(self.simple_kalman.kalman.plot_t) - len(self.simple_kalman.kalman.ratio_a)
         full_ratio_array = np.insert(self.simple_kalman.kalman.ratio_a, 0, np.full((fill),self.simple_kalman.kalman.ratio))
-        plt.plot(self.simple_kalman.kalman.plot_t,full_ratio_array)
-        matplotlib2tikz.save("plots/{}_robot_ratio_{}.tex".format(type, self.window), figureheight='4cm', figurewidth='14cm' )
+
+        np.savetxt("plots/{}_robot_ratio_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],full_ratio_array[b:-e]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Export plots")
