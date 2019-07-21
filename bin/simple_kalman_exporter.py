@@ -53,7 +53,7 @@ class SimpleKalmanExporter:
         if self.plot is True:
             self.plot_all()
         else:
-            self.export_plots()
+            self.export_plots(100,50)
 
     def set_sim_params(self):
         self.simple_kalman = SimpleKalmanSim(
@@ -122,30 +122,28 @@ class SimpleKalmanExporter:
 
         plt.show()
 
-    def export_plots(self):
+    def export_plots(self, begin=0, end=-1):
 
         type = self.type_check()
-        b = 100
-        e = 50
 
         new_t_array = []
         for elem in self.simple_kalman.kalman.plot_t:
-            new_t_array.append(elem - self.simple_kalman.kalman.plot_t[b])
+            new_t_array.append(elem - self.simple_kalman.kalman.plot_t[begin])
 
         self.simple_kalman.kalman.plot_t = new_t_array
 
-        np.savetxt("plots/{}_input_vel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[b:-e], self.simple_kalman.kalman.plot_u0[b:-e]]) ,header='t u0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_input_vel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[begin:-end], self.simple_kalman.kalman.plot_u0[begin:-end]]) ,header='t u0', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_input_accel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[b:-e], self.simple_kalman.kalman.plot_a[b:-e]]) ,header='t a', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_input_accel.csv".format(type), np.transpose([self.simple_kalman.kalman.plot_t[begin:-end], self.simple_kalman.kalman.plot_a[begin:-end]]) ,header='t a', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_robot_dist_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],self.simple_kalman.kalman.plot_y[b:-e]]) ,header='t y', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_robot_dist_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[begin:-end],self.simple_kalman.kalman.plot_y[begin:-end]]) ,header='t y', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_robot_vel_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],self.simple_kalman.kalman.plot_v[b:-e]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_robot_vel_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[begin:-end],self.simple_kalman.kalman.plot_v[begin:-end]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
 
         fill = len(self.simple_kalman.kalman.plot_t) - len(self.simple_kalman.kalman.ratio_a)
         full_ratio_array = np.insert(self.simple_kalman.kalman.ratio_a, 0, np.full((fill),self.simple_kalman.kalman.ratio))
 
-        np.savetxt("plots/{}_robot_ratio_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[b:-e],full_ratio_array[b:-e]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_robot_ratio_{}.csv".format(type,self.window), np.transpose([self.simple_kalman.kalman.plot_t[begin:-end],full_ratio_array[begin:-end]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
 
 
 if __name__ == '__main__':

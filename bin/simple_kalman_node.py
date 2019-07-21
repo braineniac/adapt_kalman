@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import rospy
+## WARNING! THIS IS LEAGACY CODE, IT DOESN'T WORK CURRENTLY
+
 import time
+import numpy as np
+
+import rospy
 from geometry_msgs.msg import TwistWithCovarianceStamped
 from sensor_msgs.msg import Imu
 from nav_msgs.msg import Odometry
-import numpy as np
+
 
 class SimpleKalmanNode:
     def __init__(self):
@@ -37,12 +41,12 @@ class SimpleKalmanNode:
         self.phi_k = np.zeros((3,3))
         self.D_k = np.zeros((3,3))
         self.gamma_k = np.zeros((3,3))      # control matrix
-        self.Q_k = np.zeros((3,3))
-        self.R_k = np.zeros((3,3))
+        self.Q_k = np.zeros((3,3))          # process noise
+        self.R_k = np.zeros((3,3))          # observation noise
         self.G_k = np.zeros((3,3))
         self.H_k = np.zeros((3,3))
         self.y_k = np.zeros((3,1))          # output
-        self.u_k = np.zeros((3,1))          # cocntrol vector
+        self.u_k = np.zeros((3,1))          # control vector
 
         #################
         ### ROS stuff ###

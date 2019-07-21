@@ -21,10 +21,6 @@ from fractions import Fraction
 
 class SimpleKalman:
     def __init__(self, ratio=1/10, window="sig", window_size=10, adapt=True):
-        small_val = np.exp(-20)
-        # set initial covariance
-        #imu_stdev = (400/1000000) * 9.80655
-        #fake_enc_stdev = (400/1000000) * 9.80655 / 100.
 
         self.use_adapt = adapt
         self.window_list = ["sig", "exp"]
@@ -42,27 +38,26 @@ class SimpleKalman:
         self.peak = 0
 
         self.L_k = np.zeros((2,2))                                  # Kalman gain
-        #self.P_k_pre = np.random.normal(small_val,1.0,(2,2))        # A priori covariance
-        self.P_k_pre = np.zeros((2,2))
+        self.x_k_pre = np.zeros((2,1))                              # A priori state
+        self.P_k_pre = np.zeros((2,2))                              # A priori covariance
+        self.x_k_post = np.zeros((2,1))                             # A posteriori state
         self.P_k_post = np.zeros((2,2))                             # A posteriori covariance
-        self.C_k = np.zeros(2)
-        self.x_k_post = np.zeros((2,1))
-        self.x_k_pre = np.zeros((2,1))
         self.x_k_extr = np.zeros((2,1))                             # extrapolated state
         self.P_k_extr = np.zeros((2,1))                             # extrapolated covariance
+        self.C_k = np.zeros(2)
         self.phi_k = np.zeros((2,2))
         self.D_k = np.zeros((2,2))
         self.gamma_k = np.zeros((2,2))                              # control matrix
-        self.R_k = np.zeros((2,2))                                  # measurement covariance
-        self.Q_k = np.zeros((2,2))                                  # state covariance
+        self.R_k = np.zeros((2,2))                                  # observation noise covaraiance
+        self.Q_k = np.zeros((2,2))                                  # process noise covariance
         self.G_k = np.zeros((2,2))
         self.H_k = np.zeros((2,2))
         self.y_k = np.zeros((2,1))                                  # output
         self.u_k = np.zeros((2,1))                                  # control vector
 
-        self.R_k[0][0] = small_val
+        self.R_k[0][0] = 0
         self.R_k[1][1] = imu_stdev*imu_stdev
-        self.Q_k[0][0] = small_val
+        self.Q_k[0][0] = 0
         self.Q_k[1][1] = fake_enc_stdev*fake_enc_stdev
 
         self.H_k[1][1] = 1
@@ -198,9 +193,6 @@ class SimpleKalman:
             # append for plotting
             self.coeff_a.append(coeff)
             self.ratio_a.append(self.ratio * coeff)
-
-            if self.plot_v[-4] > 1:
-                exit(1)
 
     def decomp_fraction(self, frac):
         ratio = Fraction(frac).limit_denominator(200)

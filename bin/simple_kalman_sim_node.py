@@ -32,8 +32,6 @@ class SimpleKalmanSimNode:
 
         self.simple_kalman_sim = SimpleKalmanSim(N=N, peak_vel=peak_vel, sim_time=sim_time)
 
-        rospy.loginfo("{}".format((N/sim_time)))
-
         self.twist_freq = 10.
         self.imu_freq = 50.
 

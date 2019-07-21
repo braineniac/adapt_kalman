@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+
 import numpy as np
 from scipy import signal
 from matplotlib import pyplot as plt
-plt.subplots_adjust(hspace=0.5)
+
 import rosbag
-import argparse
+
 from simple_kalman import SimpleKalman
 
 class SimpleKalmanBag:
@@ -51,6 +53,11 @@ class SimpleKalmanBag:
             self.twist.append((twist_t,twist_l_x))
 
     def upscale_twist(self):
+        """
+        This upscales the fake wheel encoder input to match the imu rate.
+
+        It just replicates the last avalable input until a new one comes.
+        """
         last_j = (0,0)
         for _j in self.twist:
             t_twist,x_twist = _j
@@ -77,12 +84,6 @@ class SimpleKalmanBag:
         plt.xlabel("Time in s")
         plt.ylabel("Velocity")
         plt.plot(self.kalman.plot_t, self.kalman.plot_u0)
-
-        # plt.subplot(512)
-        # plt.title("Imu data")
-        # plt.xlabel("Time in s")
-        # plt.ylabel("Acceleration in m/s^2")
-        # plt.plot(self.t, self.u[1])
 
         plt.subplot(612)
         plt.title("Robot distance")
