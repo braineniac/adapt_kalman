@@ -56,7 +56,6 @@ class EKFExporter:
     def plot_all(self):
         plt.figure(1)
 
-
         plt.subplot(411)
         plt.title("Velocity in x")
         plt.plot(self.plot_t, self.vel)
@@ -90,29 +89,33 @@ class EKFExporter:
             [self.plot_t, self.pos_y]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
 
 
-    def export_test4_all(self):
-        b = 100
-        e = 75
+    def export_line_all(self, begin=0,end=-1):
         new_t_array = []
         for elem in self.plot_t:
-            new_t_array.append(elem - self.plot_t[b])
+            new_t_array.append(elem - self.plot_t[begin])
 
         np.savetxt("plots/ekf_pos.csv", np.transpose(
-            [new_t_array[b:-e], self.pos_x[b:-e]]), header='t x', comments='# ', delimiter=' ', newline='\n')
+            [new_t_array[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
         np.savetxt("plots/ekf_vel.csv", np.transpose(
-            [new_t_array[b:-e], self.vel[b:-e]]), header='t v', comments='# ', delimiter=' ', newline='\n')
-
+            [new_t_array[begin:-end], self.vel[begin:-end]]), header='t v', comments='# ', delimiter=' ', newline='\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag of EKF")
     parser.add_argument("-b", "--bag", help="Rosbag path")
     parser.add_argument("-t", "--topic", help="Topic name")
+    parser.add_argument("-e", "--exp", default="loops", help="Type of experiment ran")
+    parser.add_argument("-p", "--plot", help="Plot only")
+
     args = parser.parse_args()
     if args.topic:
         ekf_exporter = EKFExporter(args.bag, args.topic)
     else:
         ekf_exporter = EKFExporter(args.bag)
     ekf_exporter.read_bag()
-    #ekf_exporter.plot_all()
-    #ekf_exporter.export_loops()
-    ekf_exporter.export_test4_all()
+    if args.plot:
+        ekf_exporter.plot_all()
+
+    if args.exp == "loops":
+        ekf_exporter.export_loops()
+    elif args.exp == "line":
+        ekf_exporter.export_line_all(100,75)
