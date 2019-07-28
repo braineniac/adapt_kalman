@@ -21,15 +21,16 @@ import rosbag
 from geometry_msgs.msg import Quaternion
 
 class EKFExporter:
+
+    self.vel = []
+    self.pos_x = []
+    self.yaw = []
+    self.pos_y = []
+    self.t = []
+
     def __init__(self, bag_path="", odom_topic="/odometry/filtered"):
         self.bag_path = bag_path
         self.odom_topic = odom_topic
-
-        self.vel = []
-        self.pos_x = []
-        self.yaw = []
-        self.pos_y = []
-        self.t = []
 
     def read_bag(self):
         rosbag_f = rosbag.Bag(self.bag_path)
@@ -89,7 +90,7 @@ class EKFExporter:
             [self.plot_t, self.pos_y]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
 
 
-    def export_line_all(self, begin=0,end=-1):
+    def export_line_all(self, begin=0,end=1):
         new_t_array = []
         for elem in self.plot_t:
             new_t_array.append(elem - self.plot_t[begin])

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>simple_kalman</name>
+  <name>adapt_kalman</name>
   <version>0.1.0</version>
-  <description>Simple Kalman Filter</description>
+  <description>A Kalman Filter with adaptive properties</description>
 
   <maintainer email="braineniac@protonmail.com">brainenaic</maintainer>
 

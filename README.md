@@ -1,6 +1,6 @@
-# Simple Kalman Filter
+# Adaptive Kalman Filter
 
-This is an implementation of a Simple Kalman Filter. 
+This is an implementation of a Kalman Filter with adaptive covariance properties.
 
 It is meant to be used with a twist msg as a velocity input and an imu msg which was recorded with rosbag on a robot running in a straight line.
 
@@ -8,7 +8,7 @@ It is meant to be used with a twist msg as a velocity input and an imu msg which
 
 Clone this project with:
 ```
-$ git clone https://github.com/braineniac/simple_kalman.git
+$ git clone https://github.com/braineniac/adapt_kalman.git
 ```
 
 - ROS installation
@@ -16,15 +16,15 @@ $ git clone https://github.com/braineniac/simple_kalman.git
 - numpy
 - pandas
 
-You can install these with: 
+You can install these with:
 ```
 $ pip install -r requirements.txt
 ```
 
-## Installation
+## Compiling
 In your workspace run:
 ```
-$ catkin_make simple_kalman
+$ catkin_make adapt_kalman
 ```
 
 ## Use
@@ -32,8 +32,6 @@ $ catkin_make simple_kalman
 Check out the --help option with all scripts in the bin folder for details.
 
 ## TODO
-- Simple Kalman Filter running as a node
-- move upscaling from bag to core
 - extend to multiple types of message inputs
 - use multiple dimensions
 
