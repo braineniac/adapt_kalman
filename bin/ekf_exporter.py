@@ -15,6 +15,7 @@
 import argparse
 from matplotlib import pyplot as plt
 import numpy as np
+from scipy import signal
 
 import tf
 import rosbag
@@ -54,6 +55,13 @@ class EKFExporter:
 
         self.plot_t = np.abs(np.array(self.t) - self.t[0])
 
+    def filter_pos(self, array, order=5, fc=1/50.):
+        fs = 50
+        w = fc / (fs / 2.) # Normalize the frequency
+        b, a = signal.butter(order, w, 'low', analog=False)
+        output = signal.filtfilt(b, a, array)
+        return output
+
     def plot_all(self, begin=0, end=1):
         plt.figure(1)
 
@@ -64,8 +72,21 @@ class EKFExporter:
         plt.subplot(412)
         plt.plot(self.plot_t[begin:-end],self.pos_x[begin:-end])
 
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/100.), "g", label="1/100")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/50.), "m", label="1/50")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/25.), "k", label="1/25")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/200.), "r", label="1/150")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/12.), "c", label="1/12")
+        plt.legend()
+
         plt.subplot(413)
         plt.plot(self.plot_t[begin:-end],self.pos_y[begin:-end])
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/100.), "g", label="1/100")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/50.), "m", label="1/50")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/25.), "k", label="1/25")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/200.), "r", label="1/150")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/12.), "c", label="1/12")
+        plt.legend()
 
         plt.subplot(414)
         plt.plot(self.plot_t[begin:-end],self.yaw[begin:-end])
@@ -86,9 +107,14 @@ class EKFExporter:
         np.savetxt("plots/loop_x.csv", np.transpose(
             [self.plot_t[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_y.csv", np.transpose(
-            [self.plot_t[begin:-end], self.pos_y[begin:-end]]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
+        np.savetxt("plots/loop_x_filter.csv", np.transpose(
+            [self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/50.)]), header='t x', comments='# ', delimiter=' ', newline='\n')
 
+        np.savetxt("plots/loop_y.csv", np.transpose(
+            [self.plot_t[begin:-end], self.pos_y[begin:-end]]), header='t y', comments='# ', delimiter=' ', newline='\n')
+
+        np.savetxt("plots/loop_y_filter.csv", np.transpose(
+            [self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/50.)]), header='t y', comments='# ', delimiter=' ', newline='\n')
 
     def export_line_all(self, begin=0,end=1):
         new_t_array = []
