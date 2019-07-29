@@ -15,18 +15,18 @@
 import argparse
 from matplotlib import pyplot as plt
 import numpy as np
-import tf
 
+import tf
 import rosbag
 from geometry_msgs.msg import Quaternion
 
 class EKFExporter:
 
-    self.vel = []
-    self.pos_x = []
-    self.yaw = []
-    self.pos_y = []
-    self.t = []
+    vel = []
+    pos_x = []
+    yaw = []
+    pos_y = []
+    t = []
 
     def __init__(self, bag_path="", odom_topic="/odometry/filtered"):
         self.bag_path = bag_path
@@ -54,40 +54,40 @@ class EKFExporter:
 
         self.plot_t = np.abs(np.array(self.t) - self.t[0])
 
-    def plot_all(self):
+    def plot_all(self, begin=0, end=1):
         plt.figure(1)
 
         plt.subplot(411)
         plt.title("Velocity in x")
-        plt.plot(self.plot_t, self.vel)
+        plt.plot(self.plot_t[begin:-end], self.vel[begin:-end])
 
         plt.subplot(412)
-        plt.plot(self.plot_t,self.pos_x)
+        plt.plot(self.plot_t[begin:-end],self.pos_x[begin:-end])
 
         plt.subplot(413)
-        plt.plot(self.plot_t,self.pos_y)
+        plt.plot(self.plot_t[begin:-end],self.pos_y[begin:-end])
 
         plt.subplot(414)
-        plt.plot(self.plot_t,self.yaw)
+        plt.plot(self.plot_t[begin:-end],self.yaw[begin:-end])
 
         plt.figure(2)
-        plt.plot(self.pos_x,self.pos_y)
+        plt.plot(self.pos_x[begin:-end],self.pos_y[begin:-end])
 
         plt.show()
 
-    def export_loops(self):
+    def export_loops(self, begin=0, end=1):
 
         np.savetxt("plots/loop_xy.csv", np.transpose(
-            [self.pos_x, self.pos_y]), header='x y', comments='# ', delimiter=' ', newline='\n')
+            [self.pos_x[begin:-end], self.pos_y[begin:-end]]), header='x y', comments='# ', delimiter=' ', newline='\n')
 
         np.savetxt("plots/loop_yaw.csv", np.transpose(
-            [self.plot_t, self.yaw]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
+            [self.plot_t[begin:-end], self.yaw[begin:-end]]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
 
         np.savetxt("plots/loop_x.csv", np.transpose(
-            [self.plot_t, self.pos_x]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
+            [self.plot_t[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
 
         np.savetxt("plots/loop_y.csv", np.transpose(
-            [self.plot_t, self.pos_y]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
+            [self.plot_t[begin:-end], self.pos_y[begin:-end]]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
 
 
     def export_line_all(self, begin=0,end=1):
@@ -105,7 +105,6 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--bag", help="Rosbag path")
     parser.add_argument("-t", "--topic", help="Topic name")
     parser.add_argument("-e", "--exp", default="loops", help="Type of experiment ran")
-    parser.add_argument("-p", "--plot", help="Plot only")
 
     args = parser.parse_args()
     if args.topic:
@@ -113,10 +112,10 @@ if __name__ == '__main__':
     else:
         ekf_exporter = EKFExporter(args.bag)
     ekf_exporter.read_bag()
-    if args.plot:
-        ekf_exporter.plot_all()
+
+    ekf_exporter.plot_all(80,1)
 
     if args.exp == "loops":
-        ekf_exporter.export_loops()
+        ekf_exporter.export_loops(80,1)
     elif args.exp == "line":
         ekf_exporter.export_line_all(100,75)

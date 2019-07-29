@@ -81,7 +81,7 @@ class AdaptKalmanSim(AdaptKalman):
         np.savetxt("plots/sim_robot_vel_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],self.plot_v[begin:-end]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
 
         fill = len(self.plot_t) - len(self.plot_r)
-        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.plot_r))
+        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.r_k))
 
         np.savetxt("plots/sim_robot_ratio_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],full_ratio_array[begin:-end]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
 
@@ -109,4 +109,5 @@ if __name__ == '__main__':
         adapt=adapt
     )
     adapt_kalman_sim.run_filter()
-    adapt_kalman_sim.plot_all()
+    adapt_kalman_sim.plot_all(10)
+    adapt_kalman_sim.export_all(10)

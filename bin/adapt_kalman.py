@@ -49,13 +49,12 @@ class AdaptKalman(Kalman):
 
             delta_w_k = abs(w_k - w_k_last)
 
-            c_k = delta_w_k / self.peak * (np.reciprocal(self.r_k) - 1) + 1
-
             # before first peak detection
             if self.get_peak(delta_w_k) == 0:
                 c_k = 1
+            else:
+                c_k = delta_w_k / self.peak * (np.reciprocal(self.r_k) - 1) + 1
 
-            # update covariances
             u0_stdev,u1_stdev = self.decomp_fraction(self.r_k * c_k)
             self.Q_k[1][1] = u0_stdev*u0_stdev
             self.R_k[1][1] = u1_stdev*u1_stdev
@@ -81,7 +80,7 @@ class AdaptKalman(Kalman):
 
     def get_peak(self, value):
         if value > self.peak:
-                self.peak = value
+            self.peak = value
         return self.peak
 
     def sig_avg(self,array):
@@ -105,37 +104,45 @@ class AdaptKalman(Kalman):
         avg = np.average(series.ewm(span=len(array)).mean().values)
         return avg
 
-    def plot_all(self):
+    def plot_all(self, begin=0, end=1):
+
+        # zero in time in case its sliced
+        new_t_array = []
+        for elem in self.plot_t:
+            new_t_array.append(elem - self.plot_t[begin])
+
+        self.plot_t = new_t_array
+
         plt.figure(1)
 
         plt.subplot(511)
         plt.title("Simulated robot velocity")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
-        plt.plot(self.t,self.vel)
+        plt.plot(self.plot_t[begin:-end],self.plot_u[begin:-end])
 
         plt.subplot(512)
         plt.title("Robot distance")
         plt.xlabel("Time in s")
         plt.ylabel("Distance in m")
-        plt.plot(self.plot_t,self.plot_y)
+        plt.plot(self.plot_t[begin:-end],self.plot_y[begin:-end])
 
         plt.subplot(513)
         plt.title("Robot velocity post")
         plt.xlabel("Time in s")
         plt.ylabel("Velocity in m/s")
-        plt.plot(self.plot_t,self.plot_v)
+        plt.plot(self.plot_t[begin:-end],self.plot_v[begin:-end])
 
         plt.subplot(514)
         plt.title("Robot acceleration")
         plt.xlabel("Time in s")
         plt.ylabel("Acceleration in m/s^2")
-        plt.plot(self.plot_t, self.plot_a)
+        plt.plot(self.plot_t[begin:-end], self.plot_a[begin:-end])
 
         plt.subplot(515)
         plt.title("Ratio")
         fill = len(self.plot_t) - len(self.plot_r)
         full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.r_k))
-        plt.plot(self.plot_t,full_ratio_array)
+        plt.plot(self.plot_t[begin:-end],full_ratio_array[begin:-end])
 
         plt.show()

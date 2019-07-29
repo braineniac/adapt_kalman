@@ -27,13 +27,13 @@ class AdaptKalmanBag(AdaptKalman):
     imu = []
     twist = []
 
-    def __init__(self, bag_path=None, ratio=1/3.,window="sig",window_size=5,adapt=True):
+    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True):
         AdaptKalman.__init__(self,ratio,window, window_size, adapt)
-        self.bag = rosbag.Bag(bag_path)
+        self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
         for u,t in zip(zip(self.u[0],self.u[1]), np.diff(self.t)):
-            self.kalman.filter(u,t)
+            self.filter_step(u,t)
 
     def read_imu(self, topic):
         msgs = self.bag.read_messages(topics=topic)
@@ -86,13 +86,13 @@ class AdaptKalmanBag(AdaptKalman):
         np.savetxt("plots/real_robot_vel_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],self.plot_v[begin:-end]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
 
         fill = len(self.plot_t) - len(self.plot_r)
-        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.plot_r))
+        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.r_k))
 
         np.savetxt("plots/real_robot_ratio_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],full_ratio_array[begin:-end]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag through a kalman filter")
-    parser.add_argument("-b, --bagpath",help="Rosbag path")
+    parser.add_argument("-b", "--bagpath",help="Rosbag path")
     parser.add_argument("-r", "--ratio", type=float, default=1/3., help="Covariance ratio")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
     parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
@@ -113,4 +113,5 @@ if __name__ == '__main__':
     adapt_kalman_bag.read_twist("/fake_wheel/twist")
     adapt_kalman_bag.upscale_twist()
     adapt_kalman_bag.run_filter()
-    adapt_kalman_bag.plot_all()
+    adapt_kalman_bag.plot_all(200,300)
+    adapt_kalman_bag.export_all(200,300)
