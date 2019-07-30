@@ -69,7 +69,20 @@ class AdaptKalmanBag(AdaptKalman):
                     break;
             last_j = _j
 
+    def slicer(self, start=5.0, finish=16.0):
+        begin = 0
+        end = 0
+        for elem in self.plot_t:
+            if elem <= 16.0:
+                end = end + 1
+            if elem <= 5.0:
+                begin = begin + 1
+        end = len(self.plot_t) - end
+        return begin,end
+
     def export_all(self, begin=0, end=1):
+
+        begin,end = self.slicer()
 
         new_t_array = []
         for elem in self.plot_t:

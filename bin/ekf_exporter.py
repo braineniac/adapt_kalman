@@ -72,20 +72,20 @@ class EKFExporter:
         plt.subplot(412)
         plt.plot(self.plot_t[begin:-end],self.pos_x[begin:-end])
 
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/100.), "g", label="1/100")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/50.), "m", label="1/50")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/25.), "k", label="1/25")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/200.), "r", label="1/150")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/12.), "c", label="1/12")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],1,1/75.), "g", label="1/75")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],2,1/50.), "m", label="1/50")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],3,1/85.), "k", label="1/85")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],4,1/80.), "r", label="1/80")
+        #plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/100.), "c", label="1/100")
         plt.legend()
 
         plt.subplot(413)
         plt.plot(self.plot_t[begin:-end],self.pos_y[begin:-end])
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/100.), "g", label="1/100")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/50.), "m", label="1/50")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/25.), "k", label="1/25")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/200.), "r", label="1/150")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/12.), "c", label="1/12")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],1,1/75.), "g", label="1/75")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],2,1/50.), "m", label="1/50")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],3,1/85.), "k", label="1/85")
+        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],4,1/80.), "r", label="1/80")
+        #plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/100.), "c", label="1/100")
         plt.legend()
 
         plt.subplot(414)
@@ -96,34 +96,63 @@ class EKFExporter:
 
         plt.show()
 
-    def export_loops(self, begin=0, end=1):
+    def export_loops(self, begin=0, end=1, post=""):
 
-        np.savetxt("plots/loop_xy.csv", np.transpose(
+        np.savetxt("plots/loop_xy_{}.csv".format(post), np.transpose(
             [self.pos_x[begin:-end], self.pos_y[begin:-end]]), header='x y', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_yaw.csv", np.transpose(
+        np.savetxt("plots/loop_yaw_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.yaw[begin:-end]]), header='t yaw', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_x.csv", np.transpose(
+        np.savetxt("plots/loop_x_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_x_filter.csv", np.transpose(
+        np.savetxt("plots/loop_x_filter_50_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/50.)]), header='t x', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_y.csv", np.transpose(
+        np.savetxt("plots/loop_x_filter_80_{}.csv".format(post), np.transpose(
+            [self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/80.)]), header='t x', comments='# ', delimiter=' ', newline='\n')
+
+        np.savetxt("plots/loop_y_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.pos_y[begin:-end]]), header='t y', comments='# ', delimiter=' ', newline='\n')
 
-        np.savetxt("plots/loop_y_filter.csv", np.transpose(
+        np.savetxt("plots/loop_y_filter_50_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/50.)]), header='t y', comments='# ', delimiter=' ', newline='\n')
 
-    def export_line_all(self, begin=0,end=1):
+        np.savetxt("plots/loop_y_filter_80_{}.csv".format(post), np.transpose(
+            [self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/80.)]), header='t y', comments='# ', delimiter=' ', newline='\n')
+
+    def slicer(self, start=5.0, finish=16.0):
+        begin = 0
+        end = 0
+        for elem in self.plot_t:
+            if elem <= 16.0:
+                end = end + 1
+            if elem <= 5.0:
+                begin = begin + 1
+        end = len(self.plot_t) - end
+        return begin,end
+
+    def plot_export_line(self, start=5.0, finish=16.0, post=""):
+
+        begin,end = self.slicer(start,finish)
+
         new_t_array = []
         for elem in self.plot_t:
             new_t_array.append(elem - self.plot_t[begin])
 
-        np.savetxt("plots/ekf_pos.csv", np.transpose(
+        plt.figure(1)
+        plt.title("Velocity in x")
+        plt.plot(new_t_array[begin:-end], self.vel[begin:-end])
+
+        plt.figure(2)
+        plt.plot(new_t_array[begin:-end], self.pos_x[begin:-end])
+
+        plt.show()
+
+        np.savetxt("plots/ekf_pos_{}.csv".format(post), np.transpose(
             [new_t_array[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
-        np.savetxt("plots/ekf_vel.csv", np.transpose(
+        np.savetxt("plots/ekf_vel_{}.csv".format(post), np.transpose(
             [new_t_array[begin:-end], self.vel[begin:-end]]), header='t v', comments='# ', delimiter=' ', newline='\n')
 
 if __name__ == '__main__':
@@ -131,6 +160,7 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--bag", help="Rosbag path")
     parser.add_argument("-t", "--topic", help="Topic name")
     parser.add_argument("-e", "--exp", default="loops", help="Type of experiment ran")
+    parser.add_argument("--post", default="", help="Name postfix")
 
     args = parser.parse_args()
     if args.topic:
@@ -139,9 +169,9 @@ if __name__ == '__main__':
         ekf_exporter = EKFExporter(args.bag)
     ekf_exporter.read_bag()
 
-    ekf_exporter.plot_all(80,1)
 
     if args.exp == "loops":
-        ekf_exporter.export_loops(80,1)
+        ekf_exporter.export_loops(80,1, args.post)
+        ekf_exporter.plot_all(80,1)
     elif args.exp == "line":
-        ekf_exporter.export_line_all(100,75)
+        ekf_exporter.plot_export_line(args.post)
