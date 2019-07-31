@@ -63,6 +63,8 @@ class EKFExporter:
         return output
 
     def plot_all(self, begin=0, end=1):
+
+        begin,end = self.slicer()
         plt.figure(1)
 
         plt.subplot(411)
@@ -96,7 +98,9 @@ class EKFExporter:
 
         plt.show()
 
-    def export_loops(self, begin=0, end=1, post=""):
+    def export_loops(self, post=""):
+
+        begin,end = self.slicer()
 
         np.savetxt("plots/loop_xy_{}.csv".format(post), np.transpose(
             [self.pos_x[begin:-end], self.pos_y[begin:-end]]), header='x y', comments='# ', delimiter=' ', newline='\n')
@@ -126,9 +130,9 @@ class EKFExporter:
         begin = 0
         end = 0
         for elem in self.plot_t:
-            if elem <= 16.0:
+            if elem <= finish:
                 end = end + 1
-            if elem <= 5.0:
+            if elem <= start:
                 begin = begin + 1
         end = len(self.plot_t) - end
         return begin,end
@@ -171,7 +175,7 @@ if __name__ == '__main__':
 
 
     if args.exp == "loops":
-        ekf_exporter.export_loops(80,1, args.post)
-        ekf_exporter.plot_all(80,1)
+        ekf_exporter.export_loops(args.post)
+        ekf_exporter.plot_all()
     elif args.exp == "line":
         ekf_exporter.plot_export_line(args.post)

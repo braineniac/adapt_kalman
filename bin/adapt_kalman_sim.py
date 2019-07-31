@@ -49,7 +49,7 @@ class AdaptKalmanSim(AdaptKalman):
         accel += grad
         accel += noise_still
         accel += noise_moving
-        accel += offset
+        #accel += offset
 
         return accel
 
@@ -64,7 +64,9 @@ class AdaptKalmanSim(AdaptKalman):
 
         return noise_moving
 
-    def export_all(self, begin=0, end=1):
+    def export_all(self):
+
+        begin,end = self.slicer()
 
         new_t_array = []
         for elem in self.plot_t:
@@ -109,5 +111,5 @@ if __name__ == '__main__':
         adapt=adapt
     )
     adapt_kalman_sim.run_filter()
-    adapt_kalman_sim.plot_all(10)
-    adapt_kalman_sim.export_all(10)
+    adapt_kalman_sim.plot_all()
+    adapt_kalman_sim.export_all()

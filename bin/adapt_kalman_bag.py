@@ -69,17 +69,6 @@ class AdaptKalmanBag(AdaptKalman):
                     break;
             last_j = _j
 
-    def slicer(self, start=5.0, finish=16.0):
-        begin = 0
-        end = 0
-        for elem in self.plot_t:
-            if elem <= 16.0:
-                end = end + 1
-            if elem <= 5.0:
-                begin = begin + 1
-        end = len(self.plot_t) - end
-        return begin,end
-
     def export_all(self, begin=0, end=1):
 
         begin,end = self.slicer()
@@ -109,6 +98,8 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--ratio", type=float, default=1/3., help="Covariance ratio")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
     parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
+    parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
+    parser.add_argument("--twist", type=str, default="/fake_wheel/twist", help="Twist topic")
 
     args = parser.parse_args()
 
@@ -122,9 +113,9 @@ if __name__ == '__main__':
         window=args.window,
         window_size=args.window_size,
         adapt=adapt)
-    adapt_kalman_bag.read_imu("/imu")
-    adapt_kalman_bag.read_twist("/fake_wheel/twist")
+    adapt_kalman_bag.read_imu(args.imu)
+    adapt_kalman_bag.read_twist(args.twist)
     adapt_kalman_bag.upscale_twist()
     adapt_kalman_bag.run_filter()
-    adapt_kalman_bag.plot_all(200,300)
-    adapt_kalman_bag.export_all(200,300)
+    adapt_kalman_bag.plot_all()
+    #adapt_kalman_bag.export_all(200,300)

@@ -104,9 +104,22 @@ class AdaptKalman(Kalman):
         avg = np.average(series.ewm(span=len(array)).mean().values)
         return avg
 
-    def plot_all(self, begin=0, end=1):
 
-        # zero in time in case its sliced
+    def slicer(self, start=0.0, finish=np.Inf):
+        begin = 0
+        end = -1
+        for elem in self.plot_t:
+            if elem <= finish:
+                end = end + 1
+            if elem <= start:
+                begin = begin + 1
+        end = len(self.plot_t) - end
+        return begin,end
+
+    def plot_all(self, start=0.0,finish=np.Inf):
+
+        begin,end = self.slicer(start,finish)
+        print(begin,end)
         new_t_array = []
         for elem in self.plot_t:
             new_t_array.append(elem - self.plot_t[begin])
