@@ -22,7 +22,7 @@ from adapt_kalman import AdaptKalman
 
 class AdaptKalmanBag(AdaptKalman):
 
-    u = [[],[]]
+    u = [[],[],[]]
     t = []
     imu = []
     twist = []
@@ -32,7 +32,7 @@ class AdaptKalmanBag(AdaptKalman):
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
-        for u,t in zip(zip(self.u[0],self.u[1]), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1], self.u[2]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def read_imu(self, topic):
@@ -40,7 +40,8 @@ class AdaptKalmanBag(AdaptKalman):
         for imu_msg in msgs:
             imu_t = imu_msg.message.header.stamp.to_sec()
             imu_a_x = imu_msg.message.linear_acceleration.x
-            self.imu.append((imu_t,imu_a_x))
+            imu_g_z = imu_msg.message.angular_velocity.z
+            self.imu.append((imu_t,imu_a_x, imu_g_z))
 
     def read_twist(self,topic):
         msgs = self.bag.read_messages(topics=topic)
@@ -60,10 +61,11 @@ class AdaptKalmanBag(AdaptKalman):
             t_twist,x_twist = _j
             last_twist_t, last_x_twist = last_j
             for _k in self.imu:
-                t_imu,x_imu = _k
+                t_imu,x_imu,g_z_imu = _k
                 if last_twist_t <= t_imu and t_twist > t_imu:
                     self.u[0].append(last_x_twist)
                     self.u[1].append(x_imu)
+                    self.u[2].append(g_z_imu)
                     self.t.append(t_imu)
                 elif t_twist < t_imu:
                     break;

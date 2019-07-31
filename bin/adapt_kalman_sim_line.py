@@ -18,7 +18,7 @@ import argparse
 
 from adapt_kalman import AdaptKalman
 
-class AdaptKalmanSim(AdaptKalman):
+class AdaptKalmanSimLine(AdaptKalman):
 
     def __init__(self, N=200,sim_time=5.0,peak_vel=0.14,ratio=1/3, window="sig", window_size=4, adapt=False):
         AdaptKalman.__init__(self, ratio,window, window_size, adapt)
@@ -27,7 +27,8 @@ class AdaptKalmanSim(AdaptKalman):
         self.accel = self.set_accel(sim_time,N)
 
     def run_filter(self):
-        for u,t in zip(zip(self.vel,self.accel), np.diff(self.t)):
+        zeros = np.zeros(len(self.vel))
+        for u,t in zip(zip(self.vel,self.accel,zeros), np.diff(self.t)):
             self.filter_step(u,t)
 
     def set_vel(self,sim_time,peak_vel, N):
@@ -101,7 +102,7 @@ if __name__ == '__main__':
     if args.window != "":
         adapt=True
 
-    adapt_kalman_sim = AdaptKalmanSim(
+    adapt_kalman_sim_line = AdaptKalmanSimLine(
         N=args.N,
         sim_time=args.sim_time,
         peak_vel=args.peak_vel,
@@ -110,6 +111,6 @@ if __name__ == '__main__':
         window_size=args.window_size,
         adapt=adapt
     )
-    adapt_kalman_sim.run_filter()
-    adapt_kalman_sim.plot_all()
-    adapt_kalman_sim.export_all()
+    adapt_kalman_sim_line.run_filter()
+    adapt_kalman_sim_line.plot_all()
+    adapt_kalman_sim_line.export_all()

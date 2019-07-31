@@ -19,37 +19,41 @@ from fractions import Fraction
 class Kalman:
 
     # main vectors and matrices
-    L_k = np.zeros((3,1))                                  # Kalman gain
-    x_k_pre = np.zeros((3,1))                              # A priori state
-    P_k_pre = np.zeros((3,3))                              # A priori covariance
-    x_k_post = np.zeros((3,1))                             # A posteriori state
-    P_k_post = np.zeros((3,3))                             # A posteriori covariance
-    x_k_extr = np.zeros((3,1))                             # extrapolated state
-    P_k_extr = np.zeros((3,3))                             # extrapolated covariance
-    C_k = np.zeros(3)
-    phi_k = np.zeros((3,3))
-    D_k = np.zeros((3,3))
-    gamma_k = np.zeros((3,3))                              # control matrix
-    R_k = np.zeros((3,3))                                  # observation noise covaraiance
-    Q_k = np.zeros((3,3))                                  # process noise covariance
-    G_k = np.zeros((3,1))
-    H_k = np.zeros((3,1))
-    y_k = np.zeros((3,1))                                  # output
-    u_k = np.zeros((3,1))                                  # control vector
-    H_k = np.array([1,1,1])
-    G_k = np.array([1,1,1])
+    L_k = np.zeros((4,1))                                  # Kalman gain
+    x_k_pre = np.zeros((4,1))                              # A priori state
+    P_k_pre = np.zeros((4,4))                              # A priori covariance
+    x_k_post = np.zeros((4,1))                             # A posteriori state
+    P_k_post = np.zeros((4,4))                             # A posteriori covariance
+    x_k_extr = np.zeros((4,1))                             # extrapolated state
+    P_k_extr = np.zeros((4,4))                             # extrapolated covariance
+    C_k = np.zeros(4)
+    phi_k = np.zeros((4,4))
+    D_k = np.zeros((4,4))
+    gamma_k = np.zeros((4,4))                              # control matrix
+    R_k = np.zeros((4,4))                                  # observation noise covaraiance
+    Q_k = np.zeros((4,4))                                  # process noise covariance
+    G_k = np.zeros((4,1))
+    H_k = np.zeros((4,1))
+    y_k = np.zeros((4,1))                                  # output
+    u_k = np.zeros((4,1))                                  # control vector
+    H_k = np.array([1,1,1,1])
+    G_k = np.array([1,1,1,1])
     small_val = np.exp(-99)
     R_k.fill(small_val)
     Q_k.fill(small_val)
     P_k_pre.fill(small_val)
+    phi = 0
 
     # plotting
     sum_t = 0.0
     plot_t = []
+    plot_x = []
     plot_y = []
     plot_v = []
     plot_u = []
     plot_a = []
+    plot_phi =[]
+    plot_dphi = []
 
     def __init__(self, ratio=1/3.):
         self.r_k = ratio
@@ -57,12 +61,24 @@ class Kalman:
         self.R_k = imu_stdev*imu_stdev
         self.Q_k[1][1] = fake_enc_stdev*fake_enc_stdev
 
-    def set_time_delta(self):
+    def set_time_delta(self, dphi):
         t = self.delta_t
-        self.D_k = np.array([0,0,0])
-        self.phi_k = np.array([[1,t,0],[0,0,0],[0,0,0]])
-        self.gamma_k = np.array([[0,0,0],[0,1,0],[0,0,0]])
-        self.C_k = np.array([0,0,1])
+        phi = dphi*t
+        self.phi += phi
+        self.D_k = np.array([0,0,0,0])
+        self.phi_k = np.array([
+        [1,t*np.cos(self.phi),0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        [0,t*np.sin(self.phi),0,1]
+        ])
+        self.gamma_k = np.array([
+        [0,0,0,0],
+        [0,1,0,0],
+        [0,0,0,0],
+        [0,0,0,0],
+        ])
+        self.C_k = np.array([0,0,1,0])
 
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.H_k.dot(self.Q_k).dot(self.H_k.T) + self.R_k
@@ -73,7 +89,7 @@ class Kalman:
         self.x_k_post = self.x_k_pre + self.L_k.dot(F)
 
     def update_error_covar(self):
-        self.P_k_post = (np.identity(3) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
+        self.P_k_post = (np.identity(4) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
 
     def extr_state(self):
         self.x_k_extr = self.phi_k.dot(self.x_k_post) + self.gamma_k.dot(self.u_k)
@@ -88,12 +104,10 @@ class Kalman:
     def filter_iter(self, u=None, t=None):
         if u and t:
             self.delta_t = t
-            self.u_k[0] = 0
             self.u_k[1] = u[0]
-            self.y_k[0] = 0
             self.y_k[2] = u[1]
 
-            self.set_time_delta()
+            self.set_time_delta(dphi=u[2])
             self.set_gain()
             self.update_state()
             self.update_error_covar()
@@ -103,10 +117,13 @@ class Kalman:
 
             # append to arrays for plotting
             self.sum_t = self.sum_t + t
-            self.plot_y.append(self.x_k_post[0])
+            self.plot_x.append(self.x_k_post[0])
+            self.plot_y.append(self.x_k_post[3])
             self.plot_v.append(self.x_k_post[1])
-            self.plot_u = np.append(self.plot_u, [u[0]])
-            self.plot_a = np.append(self.plot_a,[u[1]])
+            self.plot_phi.append(self.phi + u[2]*t)
+            self.plot_u.append(u[0])
+            self.plot_a.append(u[1])
+            self.plot_dphi.append(u[2])
             self.plot_t.append(self.sum_t)
 
     def decomp_fraction(self, frac):
