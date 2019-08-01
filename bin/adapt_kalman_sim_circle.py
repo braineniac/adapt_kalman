@@ -23,22 +23,22 @@ class AdaptKalmanSimCircle(AdaptKalman):
     def __init__(self, N=1600,sim_time=5.0,peak_vel=0.14,ratio=1/3, window="sig", window_size=4, adapt=False):
         AdaptKalman.__init__(self, ratio,window, window_size, adapt)
         self.t = np.linspace(0,sim_time,N)
-        self.vel = np.linspace(0,sim_time,N)
-        self.accel = np.linspace(0,sim_time,N)
-        self.dphi = np.linspace(0,sim_time,N)
+        self.u[0] = np.linspace(0,sim_time,N)
+        self.u[1] = np.linspace(0,sim_time,N)
+        self.u[2] = np.linspace(0,sim_time,N)
 
         self.set_vel(sim_time,peak_vel,N)
         self.set_accel(sim_time,N)
         self.set_dphi(sim_time)
 
     def run_filter(self):
-        for u,t in zip(zip(self.vel,self.accel,self.dphi), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1],self.u[2]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def set_dphi(self,sim_time):
         turn_rate = 2*np.pi / sim_time
         t = self.t
-        self.dphi = np.piecewise(t, t>0, [turn_rate])
+        self.u[2] = np.piecewise(t, t>0, [turn_rate])
 
     def set_vel(self,sim_time,peak_vel,N):
         N_8 = N / 8
@@ -49,14 +49,14 @@ class AdaptKalmanSimCircle(AdaptKalman):
         t = self.t[begin:end]
         t_start = self.t[int(begin+0.1*len(t))]
         t_stop = self.t[int(begin+0.9*len(t))]
-        self.vel[begin:end] = np.piecewise(t, [t<t_start,t>t_start,t>t_stop], [0,peak_vel,0])
+        self.u[0][begin:end] = np.piecewise(t, [t<t_start,t>t_start,t>t_stop], [0,peak_vel,0])
 
     def set_accel(self,sim_time,N):
         accel = 0
         sigma = 0.01
         x = np.linspace(-sim_time/2.0,sim_time/2.0,N)
         gauss = np.exp(-(x/sigma)**2/2)
-        conv = np.convolve(self.vel,gauss/gauss.sum(), mode="same")
+        conv = np.convolve(self.u[0],gauss/gauss.sum(), mode="same")
         grad = 25*np.gradient(conv)
         noise_still = np.random.normal(0,0.05,N)
         noise_moving = self.get_noise_moving(1)
@@ -67,11 +67,11 @@ class AdaptKalmanSimCircle(AdaptKalman):
         accel += noise_moving
         #accel += offset
 
-        self.accel = accel
+        self.u[1] = accel
 
     def get_noise_moving(self, peak_coeff):
         noise_moving = []
-        for x in self.vel:
+        for x in self.u[0]:
             # fill staying still with zeros
             if abs(x) < 0.01:
                 noise_moving.append(0.0)

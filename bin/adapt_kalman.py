@@ -22,6 +22,7 @@ class AdaptKalman(Kalman):
     w_k_last = []
     peak = 0
     window_list = ["sig", "exp"]
+    u = [[],[],[]]
 
     # plotting
     plot_r = []

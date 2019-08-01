@@ -23,12 +23,12 @@ class AdaptKalmanSimLine(AdaptKalman):
     def __init__(self, N=200,sim_time=5.0,peak_vel=0.14,ratio=1/3, window="sig", window_size=4, adapt=False):
         AdaptKalman.__init__(self, ratio,window, window_size, adapt)
         self.t = np.linspace(0,sim_time,N)
-        self.vel = self.set_vel(sim_time,peak_vel,N)
-        self.accel = self.set_accel(sim_time,N)
+        self.u[0] = self.set_vel(sim_time,peak_vel,N)
+        self.u[1] = self.set_accel(sim_time,N)
+        self.u[2] = np.zeros(len(self.u[0]))
 
     def run_filter(self):
-        zeros = np.zeros(len(self.vel))
-        for u,t in zip(zip(self.vel,self.accel,zeros), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1],self.u[2]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def set_vel(self,sim_time,peak_vel, N):
@@ -41,10 +41,10 @@ class AdaptKalmanSimLine(AdaptKalman):
         sigma = 0.01
         x = np.linspace(-sim_time/2.0,sim_time/2.0,N)
         gauss = np.exp(-(x/sigma)**2/2)
-        conv = np.convolve(self.vel,gauss/gauss.sum(), mode="same")
+        conv = np.convolve(self.u[0],gauss/gauss.sum(), mode="same")
         grad = 50*np.gradient(conv)
         noise_still = np.random.normal(0,0.05,N)
-        noise_moving = self.get_noise_moving(3)
+        noise_moving = self.get_noise_moving(1)
         offset = 0.3
 
         accel += grad
@@ -56,7 +56,7 @@ class AdaptKalmanSimLine(AdaptKalman):
 
     def get_noise_moving(self, peak_coeff):
         noise_moving = []
-        for x in self.vel:
+        for x in self.u[0]:
             # fill staying still with zeros
             if abs(x) < 0.01:
                 noise_moving.append(0.0)
