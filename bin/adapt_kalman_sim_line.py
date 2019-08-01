@@ -20,8 +20,8 @@ from adapt_kalman import AdaptKalman
 
 class AdaptKalmanSimLine(AdaptKalman):
 
-    def __init__(self, N=200,sim_time=5.0,peak_vel=0.14,ratio=1/3, window="sig", window_size=4, adapt=False):
-        AdaptKalman.__init__(self, ratio,window, window_size, adapt)
+    def __init__(self, N=200,sim_time=5.0,peak_vel=0.14,ratio=1/3, window="sig", window_size=4, adapt=False, order=3):
+        AdaptKalman.__init__(self, ratio,window, window_size, adapt, order)
         self.t = np.linspace(0,sim_time,N)
         self.u[0] = self.set_vel(sim_time,peak_vel,N)
         self.u[1] = self.set_accel(sim_time,N)
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--ratio", type=float, default=1/3., help="Covariance ratio")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
     parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
+    parser.add_argument("-o", "--order", type=int, default="3", help="Adaptive order")
     args = parser.parse_args()
 
     adapt = False
@@ -109,7 +110,8 @@ if __name__ == '__main__':
         ratio=args.ratio,
         window=args.window,
         window_size=args.window_size,
-        adapt=adapt
+        adapt=adapt,
+        order=args.order
     )
     adapt_kalman_sim_line.run_filter()
     adapt_kalman_sim_line.plot_all()

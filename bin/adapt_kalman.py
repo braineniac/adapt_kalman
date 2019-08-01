@@ -27,11 +27,12 @@ class AdaptKalman(Kalman):
     # plotting
     plot_r = []
 
-    def __init__(self,ratio=1/3.,window="sig", window_size=5, adapt=True):
+    def __init__(self,ratio=1/3.,window="sig", window_size=5, adapt=True, order=3):
         Kalman.__init__(self, ratio)
         self.window = window
         self.window_size = window_size
         self.adapt = adapt
+        self.order = order
 
     def filter_step(self, u=None,t=None):
         if u and t:
@@ -39,7 +40,7 @@ class AdaptKalman(Kalman):
                 self.adapt_covar()
             self.filter_iter(u,t)
 
-    def adapt_covar(self,n=5):
+    def adapt_covar(self):
         N = self.window_size
         if len(self.plot_u) == N:
             self.w_k_last = self.get_window_avg(N)
@@ -55,7 +56,7 @@ class AdaptKalman(Kalman):
                 c_k = 1
             else:
                 #c_k = delta_w_k / self.peak * (np.inverse(self.r_k) - 1) + 1
-                c_k = delta_w_k / self.peak *1/3 + 1
+                c_k = delta_w_k / self.peak *self.order/10 + 1
 
             u0_stdev,u1_stdev = self.decomp_fraction(self.r_k * c_k)
             self.Q_k[1][1] = u0_stdev*u0_stdev

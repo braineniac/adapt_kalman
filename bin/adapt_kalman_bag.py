@@ -27,8 +27,8 @@ class AdaptKalmanBag(AdaptKalman):
     imu = []
     twist = []
 
-    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True):
-        AdaptKalman.__init__(self,ratio,window, window_size, adapt)
+    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True, order):
+        AdaptKalman.__init__(self,ratio,window, window_size, adapt, order)
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
@@ -102,6 +102,7 @@ if __name__ == '__main__':
     parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
     parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
     parser.add_argument("--twist", type=str, default="/fake_wheel/twist", help="Twist topic")
+    parser.add_argument("-o", "--order", type=int, default="3", help="Adaptive order")
 
     args = parser.parse_args()
 
@@ -114,7 +115,9 @@ if __name__ == '__main__':
         ratio=args.ratio,
         window=args.window,
         window_size=args.window_size,
-        adapt=adapt)
+        adapt=adapt,
+        order=args.order
+        )
     adapt_kalman_bag.read_imu(args.imu)
     adapt_kalman_bag.read_twist(args.twist)
     adapt_kalman_bag.upscale_twist()
