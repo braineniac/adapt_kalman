@@ -26,23 +26,22 @@ class Kalman:
     P_k_post = np.zeros((4,4))                             # A posteriori covariance
     x_k_extr = np.zeros((4,1))                             # extrapolated state
     P_k_extr = np.zeros((4,4))                             # extrapolated covariance
-    C_k = np.zeros(4)
+    C_k = np.zeros((2,4))
     phi_k = np.zeros((4,4))
-    D_k = np.zeros((4,4))
-    gamma_k = np.zeros((4,4))                              # control matrix
-    R_k = np.zeros((4,4))                                  # observation noise covaraiance
-    Q_k = np.zeros((4,4))                                  # process noise covariance
+    D_k = np.zeros((2,2))
+    gamma_k = np.zeros((4,2))                              # control matrix
+    R_k = np.zeros((2,2))                                  # observation noise covaraiance
+    Q_k = np.zeros((2,2))                                  # process noise covariance
     G_k = np.zeros((4,1))
     H_k = np.zeros((4,1))
-    y_k = np.zeros((4,1))                                  # output
-    u_k = np.zeros((4,1))                                  # control vector
-    H_k = np.array([1,1,1,1])
-    G_k = np.array([1,1,1,1])
+    y_k = np.zeros((2,1))                                  # output
+    u_k = np.zeros((2,1))                                  # control vector
+    H_k = np.array([1,1])
+    G_k = np.array([1,1])
     small_val = np.exp(-99)
     R_k.fill(small_val)
     Q_k.fill(small_val)
     P_k_pre.fill(small_val)
-    phi = 0
 
     # plotting
     sum_t = 0.0
@@ -58,31 +57,39 @@ class Kalman:
     def __init__(self, ratio=1/3.):
         self.r_k = ratio
         fake_enc_stdev, imu_stdev = self.decomp_fraction(ratio)
-        self.R_k = imu_stdev*imu_stdev
-        self.Q_k[1][1] = fake_enc_stdev*fake_enc_stdev
+        ang_z_stdev = 0.4
+        gyro_stdev = 0.04
+        self.R_k[0][0] = imu_stdev*imu_stdev
+        self.R_k[1][1] = gyro_stdev*gyro_stdev
+        self.Q_k[0][0] = fake_enc_stdev*fake_enc_stdev
+        self.Q_k[1][1] = ang_z_stdev*ang_z_stdev
 
-    def set_time_delta(self, dphi):
+    def set_time_delta(self):
         t = self.delta_t
-        phi = dphi*t
-        self.phi += phi
-        self.D_k = np.array([0,0,0,0])
         self.phi_k = np.array([
-        [1,t*np.cos(self.phi),0,0],
+        [1,0,t*np.cos(self.x_k_post[3]),0],
+        [0,1,t*np.sin(self.x_k_post[3]),0],
         [0,0,0,0],
-        [0,0,0,0],
-        [0,t*np.sin(self.phi),0,1]
+        [0,0,0,1]
         ])
         self.gamma_k = np.array([
-        [0,0,0,0],
-        [0,1,0,0],
-        [0,0,0,0],
-        [0,0,0,0],
+        [0,0],
+        [0,0],
+        [1,0],
+        [0,t],
         ])
-        self.C_k = np.array([0,0,1,0])
+        self.C_k = np.array([
+        [0,0,-1/t,0],
+        [0,0,0,-1/t]
+        ])
+        self.D_k = np.array([
+        [1/t,0],
+        [0,1]
+        ])
 
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.H_k.dot(self.Q_k).dot(self.H_k.T) + self.R_k
-        self.L_k = self.P_k_pre.dot(self.C_k.T).dot(1/E)
+        self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E))
 
     def update_state(self):
         F = self.y_k - self.C_k.dot(self.x_k_pre) - self.D_k.dot(self.u_k)
@@ -104,10 +111,12 @@ class Kalman:
     def filter_iter(self, u=None, t=None):
         if u and t:
             self.delta_t = t
-            self.u_k[1] = u[0]
-            self.y_k[2] = u[1]
+            self.u_k[0] = u[0]
+            self.u_k[1] = u[1]
+            self.y_k[0] = u[2]
+            self.y_k[1] = u[3]
 
-            self.set_time_delta(dphi=u[2])
+            self.set_time_delta()
             self.set_gain()
             self.update_state()
             self.update_error_covar()
@@ -118,12 +127,11 @@ class Kalman:
             # append to arrays for plotting
             self.sum_t = self.sum_t + t
             self.plot_x.append(self.x_k_post[0])
-            self.plot_y.append(self.x_k_post[3])
-            self.plot_v.append(self.x_k_post[1])
-            self.plot_phi.append(self.phi + u[2]*t)
+            self.plot_y.append(self.x_k_post[1])
+            self.plot_v.append(self.x_k_post[2])
+            self.plot_phi.append(self.x_k_post[3])
             self.plot_u.append(u[0])
-            self.plot_a.append(u[1])
-            self.plot_dphi.append(u[2])
+            self.plot_a.append(u[2])
             self.plot_t.append(self.sum_t)
 
     def decomp_fraction(self, frac):

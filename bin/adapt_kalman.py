@@ -139,20 +139,19 @@ class AdaptKalman(Kalman):
         plt.title("Robot distance in x")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
-
         plt.plot(self.plot_t[begin:-end],self.plot_x[begin:-end])
 
         plt.subplot(512)
-        plt.title("Robot velocity")
-        plt.ylabel("Velocity in m/s")
-        plt.xlabel("Time in s")
-        plt.plot(self.plot_t[begin:-end], self.plot_v[begin:-end])
-
-        plt.subplot(513)
         plt.title("Robot distance in y")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
         plt.plot(self.plot_t[begin:-end], self.plot_y[begin:-end])
+
+        plt.subplot(513)
+        plt.title("Robot velocity")
+        plt.ylabel("Velocity in m/s")
+        plt.xlabel("Time in s")
+        plt.plot(self.plot_t[begin:-end], self.plot_v[begin:-end])
 
         plt.subplot(514)
         plt.title("phi")
@@ -173,18 +172,22 @@ class AdaptKalman(Kalman):
         plt.plot(self.plot_x[begin:-end],self.plot_y[begin:-end])
 
         plt.figure(3)
-        plt.subplot(311)
+        plt.subplot(411)
         plt.title("fake wheel encoder input")
         plt.plot(self.plot_t[begin:-end],self.u[0][begin:-end-1])
 
-        plt.subplot(312)
-        plt.title("IMU input")
+        plt.subplot(412)
+        plt.title("joystick turn input")
         plt.plot(self.plot_t[begin:-end],self.u[1][begin:-end-1])
 
-        plt.subplot(313)
-        plt.title("gyro input")
+        plt.subplot(413)
+        plt.title("IMU input")
+
         plt.plot(self.plot_t[begin:-end],self.u[2][begin:-end-1])
-        plt.show()
+
+        plt.subplot(414)
+        plt.title("gyro input")
+        plt.plot(self.plot_t[begin:-end],self.u[3][begin:-end-1])
 
 
 

@@ -22,17 +22,17 @@ from adapt_kalman import AdaptKalman
 
 class AdaptKalmanBag(AdaptKalman):
 
-    u = [[],[],[]]
+    u = [[],[],[],[]]
     t = []
     imu = []
     twist = []
 
-    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True, order):
+    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True, order=5):
         AdaptKalman.__init__(self,ratio,window, window_size, adapt, order)
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
-        for u,t in zip(zip(self.u[0],self.u[1], self.u[2]), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1], self.u[2], self.u[3]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def read_imu(self, topic):
@@ -48,7 +48,8 @@ class AdaptKalmanBag(AdaptKalman):
         for twist_msg in msgs:
             twist_t = twist_msg.message.header.stamp.to_sec()
             twist_l_x = twist_msg.message.twist.twist.linear.x
-            self.twist.append((twist_t,twist_l_x))
+            twist_a_z = twist_msg.message.twist.twist.angular.z
+            self.twist.append((twist_t,twist_l_x,-twist_a_z))
 
     def upscale_twist(self):
         """
@@ -56,16 +57,17 @@ class AdaptKalmanBag(AdaptKalman):
 
         It just replicates the last avalable input until a new one comes.
         """
-        last_j = (0,0)
+        last_j = (0,0,0)
         for _j in self.twist:
-            t_twist,x_twist = _j
-            last_twist_t, last_x_twist = last_j
+            t_twist,x_twist,a_z_twist = _j
+            last_twist_t, last_x_twist, last_a_z_twist = last_j
             for _k in self.imu:
                 t_imu,x_imu,g_z_imu = _k
                 if last_twist_t <= t_imu and t_twist > t_imu:
                     self.u[0].append(last_x_twist)
-                    self.u[1].append(x_imu)
-                    self.u[2].append(g_z_imu)
+                    self.u[1].append(last_a_z_twist)
+                    self.u[2].append(x_imu)
+                    self.u[3].append(g_z_imu)
                     self.t.append(t_imu)
                 elif t_twist < t_imu:
                     break;
