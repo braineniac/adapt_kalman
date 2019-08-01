@@ -53,7 +53,8 @@ class AdaptKalman(Kalman):
             if self.get_peak(delta_w_k) == 0:
                 c_k = 1
             else:
-                c_k = delta_w_k / self.peak * (n*self.r_k - 1) + 1
+                #c_k = delta_w_k / self.peak * (np.inverse(self.r_k) - 1) + 1
+                c_k = delta_w_k / self.peak *1/3 + 1
 
             u0_stdev,u1_stdev = self.decomp_fraction(self.r_k * c_k)
             self.Q_k[1][1] = u0_stdev*u0_stdev
