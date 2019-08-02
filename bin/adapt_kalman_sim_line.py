@@ -24,11 +24,12 @@ class AdaptKalmanSimLine(AdaptKalman):
         AdaptKalman.__init__(self, ratio,window, window_size, adapt, order)
         self.t = np.linspace(0,sim_time,N)
         self.u[0] = self.set_vel(sim_time,peak_vel,N)
-        self.u[1] = self.set_accel(sim_time,N)
-        self.u[2] = np.zeros(len(self.u[0]))
+        self.u[1] = np.zeros(len(self.u[0]))
+        self.u[2] = self.set_accel(sim_time,N)
+        self.u[3] = np.zeros(len(self.u[0]))
 
     def run_filter(self):
-        for u,t in zip(zip(self.u[0],self.u[1],self.u[2]), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1], self.u[2], self.u[3]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def set_vel(self,sim_time,peak_vel, N):

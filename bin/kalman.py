@@ -32,16 +32,42 @@ class Kalman:
     gamma_k = np.zeros((4,2))                              # control matrix
     R_k = np.zeros((2,2))                                  # observation noise covaraiance
     Q_k = np.zeros((2,2))                                  # process noise covariance
-    G_k = np.zeros((4,1))
-    H_k = np.zeros((4,1))
+    G_k = np.zeros((4,2))
+    H_k = np.zeros((2,2))
     y_k = np.zeros((2,1))                                  # output
     u_k = np.zeros((2,1))                                  # control vector
-    H_k = np.array([1,1])
-    G_k = np.array([1,1])
     small_val = np.exp(-99)
     R_k.fill(small_val)
     Q_k.fill(small_val)
     P_k_pre.fill(small_val)
+    # G_k[0][0] = 1  # also nothing
+    # G_k[1][0] = 1
+    # G_k[2][0] = 1  # y has an offset, but x works
+    # G_k[3][0] = 0  # also nothing
+    # G_k[0][1] = 0   # seems to do nothing
+    # G_k[1][1] = 1
+    # G_k[2][1] = 0 # this one fucks up everything
+    # G_k[3][1] = 1
+    #
+    # H_k[0][0] = 1
+    # H_k[0][1] = 0
+    # H_k[1][0] = 0
+    # H_k[1][1] = 1
+#######################################test
+    G_k[0][0] = 0
+    G_k[1][0] = 0
+    G_k[2][0] = 1
+    G_k[3][0] = 0
+
+    G_k[0][1] = 0
+    G_k[1][1] = 0
+    G_k[2][1] = 0
+    G_k[3][1] = 1
+
+    H_k[0][0] = 1
+    H_k[0][1] = 0
+    H_k[1][0] = 0
+    H_k[1][1] = 1
 
     # plotting
     sum_t = 0.0
@@ -57,7 +83,9 @@ class Kalman:
     def __init__(self, ratio=1/3.):
         self.r_k = ratio
         fake_enc_stdev, imu_stdev = self.decomp_fraction(ratio)
-        ang_z_stdev = 0.4
+        #imu_stdev = 0.02
+        #gyro_stdev = 0.04
+        ang_z_stdev = 0.04
         gyro_stdev = 0.04
         self.R_k[0][0] = imu_stdev*imu_stdev
         self.R_k[1][1] = gyro_stdev*gyro_stdev
@@ -79,11 +107,11 @@ class Kalman:
         [0,t],
         ])
         self.C_k = np.array([
-        [0,0,-1/t,0],
-        [0,0,0,-1/t]
+        [0,0,1/t,0],
+        [0,0,0,0]
         ])
         self.D_k = np.array([
-        [1/t,0],
+        [-1/t,0],
         [0,1]
         ])
 

@@ -22,7 +22,6 @@ from adapt_kalman import AdaptKalman
 
 class AdaptKalmanBag(AdaptKalman):
 
-    u = [[],[],[],[]]
     t = []
     imu = []
     twist = []
@@ -49,7 +48,7 @@ class AdaptKalmanBag(AdaptKalman):
             twist_t = twist_msg.message.header.stamp.to_sec()
             twist_l_x = twist_msg.message.twist.twist.linear.x
             twist_a_z = twist_msg.message.twist.twist.angular.z
-            self.twist.append((twist_t,twist_l_x,-twist_a_z))
+            self.twist.append((twist_t,twist_l_x,-0.5*twist_a_z))
 
     def upscale_twist(self):
         """

@@ -26,19 +26,29 @@ class AdaptKalmanSimCircle(AdaptKalman):
         self.u[0] = np.linspace(0,sim_time,N)
         self.u[1] = np.linspace(0,sim_time,N)
         self.u[2] = np.linspace(0,sim_time,N)
+        self.u[3] = np.linspace(0,sim_time,N)
 
         self.set_vel(sim_time,peak_vel,N)
         self.set_accel(sim_time,N)
         self.set_dphi(sim_time)
+        self.set_a_z(sim_time)
 
     def run_filter(self):
-        for u,t in zip(zip(self.u[0],self.u[1],self.u[2]), np.diff(self.t)):
+        for u,t in zip(zip(self.u[0],self.u[1],self.u[2],self.u[3]), np.diff(self.t)):
             self.filter_step(u,t)
 
     def set_dphi(self,sim_time):
         turn_rate = 2*np.pi / sim_time
+        k = 0.01 # drift over time
+        dphi = []
+        for t in self.t:
+            dphi.append(t*k*turn_rate + turn_rate)
+        self.u[3] = np.array(dphi)
+
+    def set_a_z(self,sim_time):
+        turn_rate = 2*np.pi / sim_time
         t = self.t
-        self.u[2] = np.piecewise(t, t>0, [turn_rate])
+        self.u[1] = np.piecewise(t, t>0, [turn_rate])
 
     def set_vel(self,sim_time,peak_vel,N):
         N_8 = N / 8
@@ -58,8 +68,8 @@ class AdaptKalmanSimCircle(AdaptKalman):
         gauss = np.exp(-(x/sigma)**2/2)
         conv = np.convolve(self.u[0],gauss/gauss.sum(), mode="same")
         grad = 25*np.gradient(conv)
-        noise_still = np.random.normal(0,0.05,N)
-        noise_moving = self.get_noise_moving(1)
+        noise_still = np.random.normal(0,0.08,N)
+        noise_moving = self.get_noise_moving(3)
         offset = 0.3
 
         accel += grad
@@ -67,7 +77,7 @@ class AdaptKalmanSimCircle(AdaptKalman):
         accel += noise_moving
         #accel += offset
 
-        self.u[1] = accel
+        self.u[2] = accel
 
     def get_noise_moving(self, peak_coeff):
         noise_moving = []
