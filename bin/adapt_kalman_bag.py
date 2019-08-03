@@ -22,17 +22,19 @@ from adapt_kalman import AdaptKalman
 
 class AdaptKalmanBag(AdaptKalman):
 
-    t = []
+    t_bag = []
+    u_bag = [[],[]]
+    y_bag = [[],[]]
     imu = []
     twist = []
 
-    def __init__(self, bagpath=None, ratio=1/3.,window="sig",window_size=5,adapt=True, order=5):
-        AdaptKalman.__init__(self,ratio,window, window_size, adapt, order)
+    def __init__(self, bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5,adapt=True, o1=5, o2=5):
+        AdaptKalman.__init__(self,r1,r2,window, ws1,ws2, o1,o2)
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
-        for u,t in zip(zip(self.u[0],self.u[1], self.u[2], self.u[3]), np.diff(self.t)):
-            self.filter_step(u,t)
+        for u,y,t in zip(zip(self.u_bag[0],self.u_bag[1]), zip(self.y_bag[0], self.y_bag[1]), np.diff(self.t_bag)):
+            self.filter_step(u,y,t)
 
     def read_imu(self, topic):
         msgs = self.bag.read_messages(topics=topic)
@@ -63,11 +65,11 @@ class AdaptKalmanBag(AdaptKalman):
             for _k in self.imu:
                 t_imu,x_imu,g_z_imu = _k
                 if last_twist_t <= t_imu and t_twist > t_imu:
-                    self.u[0].append(last_x_twist)
-                    self.u[1].append(last_a_z_twist)
-                    self.u[2].append(x_imu)
-                    self.u[3].append(g_z_imu)
-                    self.t.append(t_imu)
+                    self.u_bag[0].append(last_x_twist)
+                    self.u_bag[1].append(last_a_z_twist)
+                    self.y_bag[0].append(x_imu)
+                    self.y_bag[1].append(g_z_imu)
+                    self.t_bag.append(t_imu)
                 elif t_twist < t_imu:
                     break;
             last_j = _j
@@ -98,30 +100,33 @@ class AdaptKalmanBag(AdaptKalman):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag through a kalman filter")
     parser.add_argument("-b", "--bagpath",help="Rosbag path")
-    parser.add_argument("-r", "--ratio", type=float, default=1/3., help="Covariance ratio")
+    parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")
+    parser.add_argument("-r2", "--ratio2", type=float, default=1., help="Covariance ratio2")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
-    parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
+    parser.add_argument("-ws1", "--window_size1", type=int, default=5, help="Window size1")
+    parser.add_argument("-ws2", "--window_size2", type=int, default=5, help="Window size2")
     parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
     parser.add_argument("--twist", type=str, default="/fake_wheel/twist", help="Twist topic")
-    parser.add_argument("-o", "--order", type=int, default="3", help="Adaptive order")
+    parser.add_argument("-o1", "--order1", type=int, default=3, help="Adaptive order1")
+    parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
+    parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
+    parser.add_argument("-t1", "--end", type=float, default=np.inf, help="End of slice")
 
     args = parser.parse_args()
 
-    adapt = False
-    if args.window != "":
-        adapt=True
-
     adapt_kalman_bag = AdaptKalmanBag(
         bagpath = args.bagpath,
-        ratio=args.ratio,
+        r1=args.ratio1,
+        r2=args.ratio2,
         window=args.window,
-        window_size=args.window_size,
-        adapt=adapt,
-        order=args.order
+        ws1=args.window_size1,
+        ws2=args.window_size2,
+        o1=args.order1,
+        o2=args.order2
         )
     adapt_kalman_bag.read_imu(args.imu)
     adapt_kalman_bag.read_twist(args.twist)
     adapt_kalman_bag.upscale_twist()
     adapt_kalman_bag.run_filter()
-    adapt_kalman_bag.plot_all()
+    adapt_kalman_bag.plot_all(args.begin,args.end)
     #adapt_kalman_bag.export_all(200,300)

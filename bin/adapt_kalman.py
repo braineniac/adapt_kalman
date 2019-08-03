@@ -19,72 +19,95 @@ from matplotlib import pyplot as plt
 from kalman import Kalman
 
 class AdaptKalman(Kalman):
-    w_k_last = []
-    peak = 0
+    delta_w_hat = np.zeros((2,1))  # delta_w peak vector
+    u = [[],[]]                    # all control input vectors
+    y = [[],[]]                    # all measuremnt vectors
+    r_a = [[[],[]],[[],[]]]
+    order = np.zeros((2,2))
+    N = np.zeros((2,1))
+    w_k_pre = np.zeros((2,1))
+    w_k = np.zeros((2,1))
+    wsize = np.zeros((2,1))
+    # s = np.zeros((2,2))
+    #R_k_pre = np.zeros((2,2))
+    #R_k_set = False
     window_list = ["sig", "exp"]
-    u = [[],[],[],[]]
 
-    # plotting
-    plot_r = []
+    def __init__(self,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1):
+        Kalman.__init__(self, r1, r2)
+        self.window_type = window_type
+        self.N[0] = ws1
+        self.N[1] = ws2
+        self.order[0][0] = o1
+        self.order[1][1] = o2
+        self.wsize[0] = ws1
+        self.wsize[1] = ws2
+        #self.R_k_pre = self.R_k
+        # self.s[0][0] = 1
+        # self.s[1][1] = 1
 
-    def __init__(self,ratio=1/3.,window="sig", window_size=5, adapt=True, order=3):
-        Kalman.__init__(self, ratio)
-        self.window = window
-        self.window_size = window_size
-        self.adapt = adapt
-        self.order = order
-
-    def filter_step(self, u=None,t=None):
+    def filter_step(self, u=None, y=None,t=None):
         if u and t:
-            if self.adapt:
-                self.adapt_covar()
-            self.filter_iter(u,t)
+            self.adapt_covar()
+            self.filter_iter(u,y,t)
 
     def adapt_covar(self):
-        N = self.window_size
-        if len(self.plot_u) == N:
-            self.w_k_last = self.get_window_avg(N)
+        c_k = np.identity(2)
 
-        elif len(self.plot_u) >= 2*N:
-            w_k = self.get_window_avg(N)
-            w_k_last = self.w_k_last
+        if len(self.u_a[0]) >= 2*self.N[0] and len(self.u_a[1]) >= 2*self.N[1]:
+            w_k = self.set_windows()
+            w_k_pre = self.w_k_pre
 
-            delta_w_k = abs(w_k - w_k_last)
+            delta_w_k = abs(w_k - w_k_pre)
 
-            # before first peak detection
-            if self.get_peak(delta_w_k) == 0:
-                c_k = 1
-            else:
-                #c_k = delta_w_k / self.peak * (np.inverse(self.r_k) - 1) + 1
-                c_k = delta_w_k / self.peak *self.order/10 + 1
+            self.set_peak(delta_w_k)
 
-            u0_stdev,u1_stdev = self.decomp_fraction(self.r_k * c_k)
-            self.Q_k[1][1] = u0_stdev*u0_stdev
-            self.R_k = u1_stdev*u1_stdev
+            c_k = (self.order/10).dot(self.delta_w_hat).dot(delta_w_k.T) + np.identity(2)
 
             # update for next iteration
-            self.w_k_last = w_k
+            self.w_k_pre = w_k
 
-            # append for plotting
-            self.plot_r.append(self.r_k * c_k)
+        elif len(self.u_a[0]) >= self.N[0] and len(self.u_a[1]) >= self.N[1]:
+                self.w_k_pre = self.set_windows()
 
-    def get_window_avg(self, N):
-        array = []
+        # if np.array_equal(np.identity(2), c_k):
+        #     self.R_k_set = False
+        #     self.R_k = self.R_k_pre
+        # elif not self.R_k_set:
+        #     self.R_k = self.R_k.dot(self.s)
+        #     self.R_k_set = True
+
+        r_k_post = c_k.dot(self.r_k)
+        self.Q_k = self.R_k.dot(r_k_post)
+        self.r_a[0][0].append(r_k_post[0][0])
+        self.r_a[0][1].append(r_k_post[0][1])
+        self.r_a[1][0].append(r_k_post[1][0])
+        self.r_a[1][1].append(r_k_post[1][1])
+
+    def set_windows(self):
+        w_avg = np.zeros((2,1))
+        w_avg[0] = self.get_window_avg(self.u_a[0], self.N[0])
+        w_avg[1] = self.get_window_avg(self.u_a[1], self.N[1])
+        return w_avg
+
+    def get_window_avg(self, array, N):
+        window = []
         avg = 0
         for i in range(0,N):
-            array.append(self.plot_u[-i-1])
-
-        if self.window == "exp":
-            avg = self.exp_avg(array)
-        elif self.window == "sig":
-            avg = self.sig_avg(array)
-
+            window.append(array[-i-1])
+        if self.window_type == "exp":
+            avg = self.exp_avg(window)
+        elif self.window_type == "sig":
+            avg = self.sig_avg(window)
         return avg
 
-    def get_peak(self, value):
-        if value > self.peak:
-            self.peak = value
-        return self.peak
+    def set_peak(self, delta_w):
+        for row in delta_w:
+            for cell in delta_w:
+                row = int(row)
+                cell = int(cell)
+                if self.delta_w_hat[row][cell] < delta_w[row][cell]:
+                    self.delta_w_hat[row][cell] = 1/delta_w[row][cell]
 
     def sig_avg(self,array):
         n = len(array)
@@ -108,87 +131,96 @@ class AdaptKalman(Kalman):
         return avg
 
 
-    def slicer(self, start=0.0, finish=np.Inf):
+    def find_slice(self, start=0.0, finish=np.Inf):
         begin = 0
         end = -1
-        for elem in self.plot_t:
+        for elem in self.t_a:
             if elem <= finish:
                 end = end + 1
             if elem <= start:
                 begin = begin + 1
-        end = len(self.plot_t) - end
+        end = len(self.t_a) - end
         return begin,end
 
+    def set_zero_time(self, begin):
+        new_t_array = []
+        for elem in self.t_a:
+            new_t_array.append(elem - self.t_a[begin])
+        self.t_a = new_t_array
+
+    def psi_fix(self):
+        psi_a = []
+        for psi in self.x_a[3]:
+            k = abs(int(psi / (2*np.pi)))
+            if psi > 2*np.pi:
+                psi -= 2*np.pi*k
+            elif psi < -2*np.pi*k:
+                psi += 2*np.pi*(k+1)
+            psi_a.append(psi*180/np.pi)
+        self.x_a[3] = psi_a
+
     def plot_all(self, start=0.0,finish=np.Inf):
-
-        begin,end = self.slicer(start,finish)
-        new_t_array = []
-        for elem in self.plot_t:
-            new_t_array.append(elem - self.plot_t[begin])
-
-        self.plot_t = new_t_array
-        begin,end = self.slicer(start,finish)
-        new_t_array = []
-        for elem in self.plot_t:
-            new_t_array.append(elem - self.plot_t[begin])
-
-        self.plot_t = new_t_array
+        begin,end = self.find_slice(start,finish)
+        self.set_zero_time(begin)
+        self.psi_fix()
 
         plt.figure(1)
-        plt.subplot(511)
+        plt.subplot(411)
         plt.title("Robot distance in x")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
-        plt.plot(self.plot_t[begin:-end],self.plot_x[begin:-end])
+        plt.plot(self.t_a[begin:-end],self.x_a[0][begin:-end])
 
-        plt.subplot(512)
+        plt.subplot(412)
         plt.title("Robot distance in y")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
-        plt.plot(self.plot_t[begin:-end], self.plot_y[begin:-end])
+        plt.plot(self.t_a[begin:-end], self.x_a[1][begin:-end])
 
-        plt.subplot(513)
+        plt.subplot(413)
         plt.title("Robot velocity")
         plt.ylabel("Velocity in m/s")
         plt.xlabel("Time in s")
-        plt.plot(self.plot_t[begin:-end], self.plot_v[begin:-end])
+        plt.plot(self.t_a[begin:-end], self.x_a[2][begin:-end])
 
-        plt.subplot(514)
+        plt.subplot(414)
         plt.title("phi")
-        plt.ylabel("Phi in rad")
+        plt.ylabel("Phi in degrees")
         plt.xlabel("Time in s")
-        plt.plot(self.plot_t[begin:-end],self.plot_phi[begin:-end])
-
-        plt.subplot(515)
-        plt.title("Ratio")
-        fill = len(self.plot_t) - len(self.plot_r)
-        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.r_k))
-        plt.plot(self.plot_t[begin:-end],full_ratio_array[begin:-end])
+        plt.plot(self.t_a[begin:-end],self.x_a[3][begin:-end])
 
         plt.figure(2)
         plt.title("xy")
         plt.xlabel("x distance")
         plt.ylabel("y distance")
-        plt.plot(self.plot_x[begin:-end],self.plot_y[begin:-end])
+        plt.plot(self.x_a[0][begin:-end],self.x_a[1][begin:-end])
 
         plt.figure(3)
         plt.subplot(411)
         plt.title("fake wheel encoder input")
-        plt.plot(self.plot_t[begin:-end],self.u[0][begin:-end-1])
+        plt.plot(self.t_a[begin:-end],self.u_a[0][begin:-end])
 
         plt.subplot(412)
         plt.title("joystick turn input")
-        plt.plot(self.plot_t[begin:-end],self.u[1][begin:-end-1])
+        plt.plot(self.t_a[begin:-end],self.u_a[1][begin:-end])
 
         plt.subplot(413)
         plt.title("IMU input")
 
-        plt.plot(self.plot_t[begin:-end],self.u[2][begin:-end-1])
+        plt.plot(self.t_a[begin:-end],self.y_a[0][begin:-end])
 
         plt.subplot(414)
         plt.title("gyro input")
-        plt.plot(self.plot_t[begin:-end],self.u[3][begin:-end-1])
+        plt.plot(self.t_a[begin:-end],self.y_a[1][begin:-end])
 
+        plt.figure(4)
 
+        plt.subplot(211)
+        plt.title("Ratio 00")
+        plt.plot(self.t_a[begin:-end],self.r_a[0][0][begin:-end])
+
+        plt.subplot(212)
+        plt.title("Ratio 11")
+        plt.plot(self.t_a[begin:-end],self.r_a[1][1][begin:-end])
 
         plt.show()
