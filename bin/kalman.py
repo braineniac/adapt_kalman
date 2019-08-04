@@ -41,6 +41,9 @@ class Kalman:
     H_k[0][0] = 1
     H_k[1][1] = 1
 
+    alpha = 1
+    beta = 1
+
     t = 0.0
     dt = 0.0
     t_a = []
@@ -48,9 +51,11 @@ class Kalman:
     u_a = [[],[]]
     y_a = [[],[]]
 
-    def __init__(self, ratio1=1/3., ratio2=1.):
+    def __init__(self, ratio1=1/3., ratio2=1., alpha=1.,beta=1.):
         self.r_k[0][0] = ratio1
         self.r_k[1][1] = ratio2
+        self.alpha = alpha
+        self.beta = beta
         imu_stdev = 0.04
         gyro_stdev = 0.02
         fake_enc_stdev = ratio1 * imu_stdev
@@ -70,16 +75,16 @@ class Kalman:
         self.gamma_k = np.array([
         [0,0],
         [0,0],
-        [1,0],
-        [0,self.dt],
+        [self.alpha,0],
+        [0,self.beta*self.dt],
         ])
         self.C_k = np.array([
         [0,0,1/self.dt,0],
         [0,0,0,0]
         ])
         self.D_k = np.array([
-        [-1/self.dt,0],
-        [0,1]
+        [-self.alpha/self.dt,0],
+        [0,self.beta]
         ])
 
     def set_gain(self):

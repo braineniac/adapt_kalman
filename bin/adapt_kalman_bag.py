@@ -29,7 +29,7 @@ class AdaptKalmanBag(AdaptKalman):
     twist = []
 
     def __init__(self, bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5,adapt=True, o1=5, o2=5):
-        AdaptKalman.__init__(self,r1,r2,window, ws1,ws2, o1,o2)
+        AdaptKalman.__init__(self,alpha=alpha, beta=beta, r1=r1, r2=r2, window_type=window, ws1=ws1, ws2=ws2, o1=o1, o2=o2)
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
@@ -50,7 +50,7 @@ class AdaptKalmanBag(AdaptKalman):
             twist_t = twist_msg.message.header.stamp.to_sec()
             twist_l_x = twist_msg.message.twist.twist.linear.x
             twist_a_z = twist_msg.message.twist.twist.angular.z
-            self.twist.append((twist_t,twist_l_x,-0.5*twist_a_z))
+            self.twist.append((twist_t,twist_l_x,-twist_a_z))
 
     def upscale_twist(self):
         """
@@ -74,48 +74,30 @@ class AdaptKalmanBag(AdaptKalman):
                     break;
             last_j = _j
 
-    def export_all(self, begin=0, end=1):
-
-        begin,end = self.slicer()
-
-        new_t_array = []
-        for elem in self.plot_t:
-            new_t_array.append(elem - self.plot_t[begin])
-
-        self.plot_t = new_t_array
-
-        np.savetxt("plots/real_input_vel.csv", np.transpose([self.plot_t[begin:-end], self.plot_u[begin:-end]]) ,header='t u0', comments='# ',delimiter=' ', newline='\n')
-
-        np.savetxt("plots/real_input_accel.csv", np.transpose([self.plot_t[begin:-end], self.plot_a[begin:-end]]) ,header='t a', comments='# ',delimiter=' ', newline='\n')
-
-        np.savetxt("plots/real_robot_dist_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],self.plot_y[begin:-end]]) ,header='t y', comments='# ',delimiter=' ', newline='\n')
-
-        np.savetxt("plots/real_robot_vel_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],self.plot_v[begin:-end]]) ,header='t v', comments='# ',delimiter=' ', newline='\n')
-
-        fill = len(self.plot_t) - len(self.plot_r)
-        full_ratio_array = np.insert(self.plot_r, 0, np.full((fill),self.r_k))
-
-        np.savetxt("plots/real_robot_ratio_{}.csv".format(self.window), np.transpose([self.plot_t[begin:-end],full_ratio_array[begin:-end]]) ,header='t r', comments='# ',delimiter=' ', newline='\n')
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag through a kalman filter")
     parser.add_argument("-b", "--bagpath",help="Rosbag path")
+    parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
+    parser.add_argument("--twist", type=str, default="/fake_encoder/twist", help="Twist topic")
+    parser.add_argument("--alpha", default=1.0,help="Alpha")
+    parser.add_argument("--beta", default=1.0,help="Beta")
     parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")
     parser.add_argument("-r2", "--ratio2", type=float, default=1., help="Covariance ratio2")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
     parser.add_argument("-ws1", "--window_size1", type=int, default=5, help="Window size1")
     parser.add_argument("-ws2", "--window_size2", type=int, default=5, help="Window size2")
-    parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
-    parser.add_argument("--twist", type=str, default="/fake_wheel/twist", help="Twist topic")
     parser.add_argument("-o1", "--order1", type=int, default=3, help="Adaptive order1")
     parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
     parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
     parser.add_argument("-t1", "--end", type=float, default=np.inf, help="End of slice")
+    parser.add_argument("-p" "--post", type=str, default="", help="Post export text")
 
     args = parser.parse_args()
 
     adapt_kalman_bag = AdaptKalmanBag(
         bagpath = args.bagpath,
+        alpha=args.alpha,
+        beta=args.beta,
         r1=args.ratio1,
         r2=args.ratio2,
         window=args.window,
@@ -129,4 +111,4 @@ if __name__ == '__main__':
     adapt_kalman_bag.upscale_twist()
     adapt_kalman_bag.run_filter()
     adapt_kalman_bag.plot_all(args.begin,args.end)
-    #adapt_kalman_bag.export_all(200,300)
+    adapt_kalman_bag.export_all(args.begin,args.end, "real" ,args.post)

@@ -33,8 +33,8 @@ class AdaptKalman(Kalman):
     #R_k_set = False
     window_list = ["sig", "exp"]
 
-    def __init__(self,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1):
-        Kalman.__init__(self, r1, r2)
+    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1):
+        Kalman.__init__(self, r1, r2, alpha,beta)
         self.window_type = window_type
         self.N[0] = ws1
         self.N[1] = ws2
@@ -198,11 +198,11 @@ class AdaptKalman(Kalman):
         plt.figure(3)
         plt.subplot(411)
         plt.title("fake wheel encoder input")
-        plt.plot(self.t_a[begin:-end],self.u_a[0][begin:-end])
+        plt.plot(self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
 
         plt.subplot(412)
         plt.title("joystick turn input")
-        plt.plot(self.t_a[begin:-end],self.u_a[1][begin:-end])
+        plt.plot(self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
 
         plt.subplot(413)
         plt.title("IMU input")
@@ -224,3 +224,26 @@ class AdaptKalman(Kalman):
         plt.plot(self.t_a[begin:-end],self.r_a[1][1][begin:-end])
 
         plt.show()
+
+    def export_all(self, start=0, finish=np.inf,pre="",post=""):
+        begin,end = self.find_slice(start,finish)
+        self.set_zero_time(begin)
+        self.psi_fix()
+
+        np.savetxt("plots/{}_u0_{}.csv".format(pre,post), np.transpose([self.t_a[begin:-end], [self.alpha*x for x in self.u_a[0][begin:-end]]]) ,header='t u0', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_u1_{}.csv".format(pre,post), np.transpose([self.t_a[begin:-end], [self.beta*x for x in self.u_a[1][begin:-end]]]) ,header='t u1', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_y0_{}.csv".format(pre,post), np.transpose([self.t_a[begin:-end], self.y_a[0][begin:-end]]) ,header='t y0', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_y1_{}.csv".format(pre,post), np.transpose([self.t_a[begin:-end], self.y_a[1][begin:-end]]) ,header='t y1', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_x0_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[0][begin:-end]]) ,header='t x0', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_x1_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[1][begin:-end]]) ,header='t x1', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_x2_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[2][begin:-end]]) ,header='t x2', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_x3_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[3][begin:-end]]) ,header='t x3', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_r0_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.r_a[0][begin:-end]]) ,header='t r0', comments='# ',delimiter=' ', newline='\n')
