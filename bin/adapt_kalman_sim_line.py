@@ -107,7 +107,7 @@ if __name__ == '__main__':
     parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
     parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
     parser.add_argument("-t1", "--end", type=float, default=np.inf, help="End of slice")
-    parser.add_argument("-p" "--post", type=str, default="", help="Post export text")
+    parser.add_argument("-p" ,"--post", type=str, default="", help="Post export text")
     args = parser.parse_args()
 
     adapt_kalman_sim_line = AdaptKalmanSimLine(

@@ -28,7 +28,7 @@ class AdaptKalmanBag(AdaptKalman):
     imu = []
     twist = []
 
-    def __init__(self, bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5,adapt=True, o1=5, o2=5):
+    def __init__(self, alpha=1.0,beta=1.0,bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5, o1=5, o2=5):
         AdaptKalman.__init__(self,alpha=alpha, beta=beta, r1=r1, r2=r2, window_type=window, ws1=ws1, ws2=ws2, o1=o1, o2=o2)
         self.bag = rosbag.Bag(bagpath)
 
@@ -79,8 +79,8 @@ if __name__ == '__main__':
     parser.add_argument("-b", "--bagpath",help="Rosbag path")
     parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
     parser.add_argument("--twist", type=str, default="/fake_encoder/twist", help="Twist topic")
-    parser.add_argument("--alpha", default=1.0,help="Alpha")
-    parser.add_argument("--beta", default=1.0,help="Beta")
+    parser.add_argument("--alpha", type=float, default=1.0,help="Alpha")
+    parser.add_argument("--beta", type=float,default=1.0,help="Beta")
     parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")
     parser.add_argument("-r2", "--ratio2", type=float, default=1., help="Covariance ratio2")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
     parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
     parser.add_argument("-t1", "--end", type=float, default=np.inf, help="End of slice")
-    parser.add_argument("-p" "--post", type=str, default="", help="Post export text")
+    parser.add_argument("-p" ,"--post", type=str, default="", help="Post export text")
 
     args = parser.parse_args()
 

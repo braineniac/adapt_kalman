@@ -34,7 +34,7 @@ class AdaptKalman(Kalman):
     window_list = ["sig", "exp"]
 
     def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1):
-        Kalman.__init__(self, r1, r2, alpha,beta)
+        Kalman.__init__(self, r1=r1, r2=r2, alpha=alpha,beta=beta)
         self.window_type = window_type
         self.N[0] = ws1
         self.N[1] = ws2
@@ -238,12 +238,12 @@ class AdaptKalman(Kalman):
 
         np.savetxt("plots/{}_y1_{}.csv".format(pre,post), np.transpose([self.t_a[begin:-end], self.y_a[1][begin:-end]]) ,header='t y1', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_x0_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[0][begin:-end]]) ,header='t x0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_x0_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.x_a[0][begin:-end]]) ,header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_x1_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[1][begin:-end]]) ,header='t x1', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_x1_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.x_a[1][begin:-end]]) ,header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_x2_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[2][begin:-end]]) ,header='t x2', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_x2_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.x_a[2][begin:-end]]) ,header='t x2', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_x3_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.x_a[3][begin:-end]]) ,header='t x3', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_x3_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.x_a[3][begin:-end]]) ,header='t x3', comments='# ',delimiter=' ', newline='\n')
 
-        np.savetxt("plots/{}_r0_{}_{}.csv".format(pre,self.window,post), np.transpose([self.t_a[begin:-end],self.r_a[0][begin:-end]]) ,header='t r0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("plots/{}_r0_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.r_a[0][begin:-end]]) ,header='t r0', comments='# ',delimiter=' ', newline='\n')

@@ -51,15 +51,15 @@ class Kalman:
     u_a = [[],[]]
     y_a = [[],[]]
 
-    def __init__(self, ratio1=1/3., ratio2=1., alpha=1.,beta=1.):
-        self.r_k[0][0] = ratio1
-        self.r_k[1][1] = ratio2
+    def __init__(self, r1=1/3., r2=1., alpha=1.,beta=1.):
+        self.r_k[0][0] = r1
+        self.r_k[1][1] = r2
         self.alpha = alpha
         self.beta = beta
         imu_stdev = 0.04
         gyro_stdev = 0.02
-        fake_enc_stdev = ratio1 * imu_stdev
-        ang_z_stdev = ratio2 * gyro_stdev
+        fake_enc_stdev = r1 * imu_stdev
+        ang_z_stdev = r2 * gyro_stdev
         self.R_k[0][0] = imu_stdev*imu_stdev
         self.R_k[1][1] = gyro_stdev*gyro_stdev
         self.Q_k[0][0] = fake_enc_stdev*fake_enc_stdev
