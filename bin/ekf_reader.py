@@ -21,21 +21,17 @@ import tf
 import rosbag
 from geometry_msgs.msg import Quaternion
 
-class EKFExporter:
+class EKFReader:
 
-    vel = []
-    pos_x = []
-    yaw = []
-    pos_y = []
+    x_ekf = [[],[],[],[]]
     t = []
 
-    def __init__(self, bag_path="", odom_topic="/odometry/filtered"):
+    def __init__(self, bag_path=""):
         self.bag_path = bag_path
-        self.odom_topic = odom_topic
 
-    def read_bag(self):
+    def read_odom(self, odom_topic):
         rosbag_f = rosbag.Bag(self.bag_path)
-        odom_msgs = rosbag_f.read_messages(topics=self.odom_topic)
+        odom_msgs = rosbag_f.read_messages(topics=odom_topic)
         for odom_msg in odom_msgs:
             pos_x = odom_msg.message.pose.pose.position.x
             pos_y = odom_msg.message.pose.pose.position.y
@@ -47,54 +43,68 @@ class EKFExporter:
             q = [x,y,z,w]
             roll,pitch,yaw = tf.transformations.euler_from_quaternion(q)
             t = odom_msg.message.header.stamp.to_sec()
-            self.pos_x.append(pos_x)
-            self.pos_y.append(pos_y)
-            self.yaw.append(yaw)
-            self.vel.append(vel_x)
+            self.x_ekf[0].append(pos_x)
+            self.x_ekf[1].append(pos_y)
+            self.x_ekf[2].append(vel_x)
+            self.x_ekf[3].append(yaw)
             self.t.append(t)
 
         self.plot_t = np.abs(np.array(self.t) - self.t[0])
 
-    def filter_pos(self, array, order=5, fc=1/50.):
+    def filter_butter(self, array, order=5, fc=1/50.):
         fs = 50
         w = fc / (fs / 2.) # Normalize the frequency
         b, a = signal.butter(order, w, 'low', analog=False)
         output = signal.filtfilt(b, a, array)
         return output
 
-    def plot_all(self, begin=0, end=1):
+    def find_slice(self, start=0.0, finish=np.Inf):
+        begin = 0
+        end = -1
+        for elem in self.t:
+            if elem <= finish:
+                end = end + 1
+            if elem <= start:
+                begin = begin + 1
+        end = len(self.t) - end
+        return begin,end
 
-        begin,end = self.slicer()
+    def set_zero_time(self, begin):
+        new_t_array = []
+        print(self.t[begin])
+        for elem in self.t:
+            new_t_array.append(elem - self.t[begin])
+        self.t = new_t_array
+
+    def plot_all(self, start_t=0, end_t=np.inf):
+        print(start_t, end_t)
+        begin,end = self.find_slice(start_t,end_t)
+        print(begin,end)
+        self.set_zero_time(begin)
         plt.figure(1)
 
         plt.subplot(411)
-        plt.title("Velocity in x")
-        plt.plot(self.plot_t[begin:-end], self.vel[begin:-end])
+        plt.title("x pos")
+        plt.plot(self.t[begin:-end],self.x_ekf[0][begin:-end])
+        #plt.plot(self.t[begin:-end], self.filter_butter(self.x_ekf[0][begin:-end],2,1/50.), "r", label="1/50")
+        #plt.legend()
 
         plt.subplot(412)
-        plt.plot(self.plot_t[begin:-end],self.pos_x[begin:-end])
-
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],1,1/75.), "g", label="1/75")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],2,1/50.), "m", label="1/50")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],3,1/85.), "k", label="1/85")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],4,1/80.), "r", label="1/80")
-        #plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_x[begin:-end],5,1/100.), "c", label="1/100")
-        plt.legend()
+        plt.title("y pos")
+        plt.plot(self.t[begin:-end],self.x_ekf[1][begin:-end])
+        #plt.plot(self.t[begin:-end], self.filter_butter(self.x_ekf[1][begin:-end],2,1/50.), "r", label="1/50")
+        #plt.legend()
 
         plt.subplot(413)
-        plt.plot(self.plot_t[begin:-end],self.pos_y[begin:-end])
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],1,1/75.), "g", label="1/75")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],2,1/50.), "m", label="1/50")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],3,1/85.), "k", label="1/85")
-        plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],4,1/80.), "r", label="1/80")
-        #plt.plot(self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/100.), "c", label="1/100")
-        plt.legend()
+        plt.title("Velocity in x")
+        plt.plot(self.t[begin:-end], self.x_ekf[2][begin:-end])
 
         plt.subplot(414)
-        plt.plot(self.plot_t[begin:-end],self.yaw[begin:-end])
+        plt.title("Phi")
+        plt.plot(self.t[begin:-end],self.x_ekf[3][begin:-end])
 
         plt.figure(2)
-        plt.plot(self.pos_x[begin:-end],self.pos_y[begin:-end])
+        plt.plot(self.x_ekf[0][begin:-end],self.x_ekf[1][begin:-end])
 
         plt.show()
 
@@ -126,56 +136,16 @@ class EKFExporter:
         np.savetxt("plots/loop_y_filter_80_{}.csv".format(post), np.transpose(
             [self.plot_t[begin:-end], self.filter_pos(self.pos_y[begin:-end],5,1/80.)]), header='t y', comments='# ', delimiter=' ', newline='\n')
 
-    def slicer(self, start=5.0, finish=16.0):
-        begin = 0
-        end = 0
-        for elem in self.plot_t:
-            if elem <= finish:
-                end = end + 1
-            if elem <= start:
-                begin = begin + 1
-        end = len(self.plot_t) - end
-        return begin,end
-
-    def plot_export_line(self, start=5.0, finish=16.0, post=""):
-
-        begin,end = self.slicer(start,finish)
-
-        new_t_array = []
-        for elem in self.plot_t:
-            new_t_array.append(elem - self.plot_t[begin])
-
-        plt.figure(1)
-        plt.title("Velocity in x")
-        plt.plot(new_t_array[begin:-end], self.vel[begin:-end])
-
-        plt.figure(2)
-        plt.plot(new_t_array[begin:-end], self.pos_x[begin:-end])
-
-        plt.show()
-
-        np.savetxt("plots/ekf_pos_{}.csv".format(post), np.transpose(
-            [new_t_array[begin:-end], self.pos_x[begin:-end]]), header='t x', comments='# ', delimiter=' ', newline='\n')
-        np.savetxt("plots/ekf_vel_{}.csv".format(post), np.transpose(
-            [new_t_array[begin:-end], self.vel[begin:-end]]), header='t v', comments='# ', delimiter=' ', newline='\n')
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag of EKF")
     parser.add_argument("-b", "--bag", help="Rosbag path")
-    parser.add_argument("-t", "--topic", help="Topic name")
-    parser.add_argument("-e", "--exp", default="loops", help="Type of experiment ran")
-    parser.add_argument("--post", default="", help="Name postfix")
+    parser.add_argument("-t", "--topic", default="/odometry/filtered", help="Topic name")
+    parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
+    parser.add_argument("-t1", "--end", type=float, default=np.inf, help="End of slice")
+    parser.add_argument("-p" ,"--post", type=str, default="", help="Post export text")
 
     args = parser.parse_args()
-    if args.topic:
-        ekf_exporter = EKFExporter(args.bag, args.topic)
-    else:
-        ekf_exporter = EKFExporter(args.bag)
-    ekf_exporter.read_bag()
 
-
-    if args.exp == "loops":
-        ekf_exporter.export_loops(args.post)
-        ekf_exporter.plot_all()
-    elif args.exp == "line":
-        ekf_exporter.plot_export_line(args.post)
+    ekf_reader = EKFReader(args.bag)
+    ekf_reader.read_odom(args.topic)
+    ekf_reader.plot_all(args.begin,args.end)
