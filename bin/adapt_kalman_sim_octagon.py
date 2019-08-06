@@ -153,7 +153,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Garry rosbag circle simulation")
     parser.add_argument("-N", type=int, default=1600, help="Number of points")
     parser.add_argument("-t", "--sim_time", type=float, default=100.0, help="Simulation time span")
-    parser.add_argument("--turn", type=float, default=360.0,help="Rbot turn in degrees")
+    parser.add_argument("--turn", type=float, default=360.0,help="Robot turn in degrees")
     parser.add_argument("--alpha", type=float, default=1.0,help="Alpha")
     parser.add_argument("--beta", type=float, default=1.0,help="Beta")
     parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")

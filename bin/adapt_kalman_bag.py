@@ -28,8 +28,8 @@ class AdaptKalmanBag(AdaptKalman):
     imu = []
     twist = []
 
-    def __init__(self, alpha=1.0,beta=1.0,bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5, o1=5, o2=5):
-        AdaptKalman.__init__(self,alpha=alpha, beta=beta, r1=r1, r2=r2, window_type=window, ws1=ws1, ws2=ws2, o1=o1, o2=o2)
+    def __init__(self, alpha=1.0,beta=1.0,bagpath=None, r1=1/3., r2 = 1.,window="sig",ws1=5, ws2= 5, o1=5, o2=5,turn=0.0):
+        AdaptKalman.__init__(self,alpha=alpha, beta=beta, r1=r1, r2=r2, window_type=window, ws1=ws1, ws2=ws2, o1=o1, o2=o2, x0=[0,0,0,turn])
         self.bag = rosbag.Bag(bagpath)
 
     def run_filter(self):
@@ -77,6 +77,7 @@ class AdaptKalmanBag(AdaptKalman):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process rosbag through a kalman filter")
     parser.add_argument("-b", "--bagpath",help="Rosbag path")
+    parser.add_argument("--turn", type=float, default=0.0,help="Robot turn in degrees")
     parser.add_argument("--imu", type=str, default="/imu", help="IMU topic")
     parser.add_argument("--twist", type=str, default="/fake_encoder/twist", help="Twist topic")
     parser.add_argument("--alpha", type=float, default=1.0,help="Alpha")
@@ -104,11 +105,12 @@ if __name__ == '__main__':
         ws1=args.window_size1,
         ws2=args.window_size2,
         o1=args.order1,
-        o2=args.order2
+        o2=args.order2,
+        turn=args.turn
         )
     adapt_kalman_bag.read_imu(args.imu)
     adapt_kalman_bag.read_twist(args.twist)
     adapt_kalman_bag.upscale_twist()
     adapt_kalman_bag.run_filter()
     adapt_kalman_bag.plot_all(args.begin,args.end)
-    adapt_kalman_bag.export_all(args.begin,args.end, "real" ,args.post)
+    #adapt_kalman_bag.export_all(args.begin,args.end, "real" ,args.post)
