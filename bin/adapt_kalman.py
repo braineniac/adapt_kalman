@@ -32,9 +32,14 @@ class AdaptKalman(Kalman):
     #R_k_pre = np.zeros((2,2))
     #R_k_set = False
     window_list = ["sig", "exp"]
+    plot_u = [[],[]]
+    plot_y = [[],[]]
+    plot_x = [[],[],[],[]]
+    plot_xy = []
+    plot_r = [[],[]]
 
-    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1):
-        Kalman.__init__(self, r1=r1, r2=r2, alpha=alpha,beta=beta)
+    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1,x0=[0,0,0,0]):
+        Kalman.__init__(self, r1=r1, r2=r2, alpha=alpha,beta=beta,x0=x0)
         self.window_type = window_type
         self.N[0] = ws1
         self.N[1] = ws2
@@ -169,59 +174,59 @@ class AdaptKalman(Kalman):
         plt.title("Robot distance in x")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
-        plt.plot(self.t_a[begin:-end],self.x_a[0][begin:-end])
+        self.plot_x[0] = plt.plot(self.t_a[begin:-end],self.x_a[0][begin:-end])
 
         plt.subplot(412)
         plt.title("Robot distance in y")
         plt.ylabel("Distance in m")
         plt.xlabel("Time in s")
-        plt.plot(self.t_a[begin:-end], self.x_a[1][begin:-end])
+        self.plot_x[1] = plt.plot(self.t_a[begin:-end], self.x_a[1][begin:-end])
 
         plt.subplot(413)
         plt.title("Robot velocity")
         plt.ylabel("Velocity in m/s")
         plt.xlabel("Time in s")
-        plt.plot(self.t_a[begin:-end], self.x_a[2][begin:-end])
+        self.plot_x[2] = plt.plot(self.t_a[begin:-end], self.x_a[2][begin:-end])
 
         plt.subplot(414)
         plt.title("phi")
         plt.ylabel("Phi in degrees")
         plt.xlabel("Time in s")
-        plt.plot(self.t_a[begin:-end],self.x_a[3][begin:-end])
+        self.plot_x[3] = plt.plot(self.t_a[begin:-end],self.x_a[3][begin:-end])
 
         plt.figure(2)
         plt.title("xy")
         plt.xlabel("x distance")
         plt.ylabel("y distance")
-        plt.plot(self.x_a[0][begin:-end],self.x_a[1][begin:-end])
+        self.plot_xy = plt.plot(self.x_a[0][begin:-end],self.x_a[1][begin:-end])
 
         plt.figure(3)
         plt.subplot(411)
         plt.title("fake wheel encoder input")
-        plt.plot(self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
+        self.plot_u[0] = plt.plot(self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
 
         plt.subplot(412)
         plt.title("joystick turn input")
-        plt.plot(self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
+        self.plot_u[1] = plt.plot(self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
 
         plt.subplot(413)
         plt.title("IMU input")
 
-        plt.plot(self.t_a[begin:-end],self.y_a[0][begin:-end])
+        self.plot_y[0] = plt.plot(self.t_a[begin:-end],self.y_a[0][begin:-end])
 
         plt.subplot(414)
         plt.title("gyro input")
-        plt.plot(self.t_a[begin:-end],self.y_a[1][begin:-end])
+        self.plot_y[0] = plt.plot(self.t_a[begin:-end],self.y_a[1][begin:-end])
 
         plt.figure(4)
 
         plt.subplot(211)
         plt.title("Ratio 00")
-        plt.plot(self.t_a[begin:-end],self.r_a[0][0][begin:-end])
+        self.plot_r[0] = plt.plot(self.t_a[begin:-end],self.r_a[0][0][begin:-end])
 
         plt.subplot(212)
         plt.title("Ratio 11")
-        plt.plot(self.t_a[begin:-end],self.r_a[1][1][begin:-end])
+        self.plot_r[1] = plt.plot(self.t_a[begin:-end],self.r_a[1][1][begin:-end])
 
         plt.show()
 
@@ -247,3 +252,5 @@ class AdaptKalman(Kalman):
         np.savetxt("plots/{}_x3_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.x_a[3][begin:-end]]) ,header='t x3', comments='# ',delimiter=' ', newline='\n')
 
         np.savetxt("plots/{}_r0_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.r_a[0][begin:-end]]) ,header='t r0', comments='# ',delimiter=' ', newline='\n')
+
+        np.savetxt("plots/{}_r1_{}_{}.csv".format(pre,self.window_type,post), np.transpose([self.t_a[begin:-end],self.r_a[1][begin:-end]]) ,header='t r1', comments='# ',delimiter=' ', newline='\n')

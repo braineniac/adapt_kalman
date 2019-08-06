@@ -25,6 +25,8 @@ class EKFReader:
 
     x_ekf = [[],[],[],[]]
     t = []
+    plot_x = [[],[],[],[]]
+    plot_xy = []
 
     def __init__(self, bag_path=""):
         self.bag_path = bag_path
@@ -77,36 +79,34 @@ class EKFReader:
         self.t = new_t_array
 
     def plot_all(self, start_t=0, end_t=np.inf):
-        print(start_t, end_t)
         begin,end = self.find_slice(start_t,end_t)
-        print(begin,end)
         self.set_zero_time(begin)
         plt.figure(1)
 
         plt.subplot(411)
         plt.title("x pos")
-        plt.plot(self.t[begin:-end],self.x_ekf[0][begin:-end])
+        self.plot_x[0] = plt.plot(self.t[begin:-end],self.x_ekf[0][begin:-end])
         #plt.plot(self.t[begin:-end], self.filter_butter(self.x_ekf[0][begin:-end],2,1/50.), "r", label="1/50")
         #plt.legend()
 
         plt.subplot(412)
         plt.title("y pos")
-        plt.plot(self.t[begin:-end],self.x_ekf[1][begin:-end])
+        self.plot_x[1] = plt.plot(self.t[begin:-end],self.x_ekf[1][begin:-end])
         #plt.plot(self.t[begin:-end], self.filter_butter(self.x_ekf[1][begin:-end],2,1/50.), "r", label="1/50")
         #plt.legend()
 
         plt.subplot(413)
         plt.title("Velocity in x")
-        plt.plot(self.t[begin:-end], self.x_ekf[2][begin:-end])
+        self.plot_x[2] = plt.plot(self.t[begin:-end], self.x_ekf[2][begin:-end])
 
         plt.subplot(414)
         plt.title("Phi")
-        plt.plot(self.t[begin:-end],self.x_ekf[3][begin:-end])
+        self.plot_x[3] = plt.plot(self.t[begin:-end],self.x_ekf[3][begin:-end])
 
         plt.figure(2)
-        plt.plot(self.x_ekf[0][begin:-end],self.x_ekf[1][begin:-end])
+        self.plot_xy = plt.plot(self.x_ekf[0][begin:-end],self.x_ekf[1][begin:-end])
 
-        plt.show()
+        #plt.show()
 
     def export_loops(self, post=""):
 

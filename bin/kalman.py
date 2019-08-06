@@ -51,7 +51,7 @@ class Kalman:
     u_a = [[],[]]
     y_a = [[],[]]
 
-    def __init__(self, r1=1/3., r2=1., alpha=1.,beta=1.):
+    def __init__(self, r1=1/3., r2=1., alpha=1.,beta=1.,x0 = [0,0,0,0]):
         self.r_k[0][0] = r1
         self.r_k[1][1] = r2
         self.alpha = alpha
@@ -64,6 +64,8 @@ class Kalman:
         self.R_k[1][1] = gyro_stdev*gyro_stdev
         self.Q_k[0][0] = fake_enc_stdev*fake_enc_stdev
         self.Q_k[1][1] = ang_z_stdev*ang_z_stdev
+        x0[3] = x0[3] * np.pi/180.
+        self.x_k_pre = np.array(x0).reshape((4,1))
 
     def set_time_delta(self):
         self.phi_k = np.array([
