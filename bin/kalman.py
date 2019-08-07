@@ -36,10 +36,7 @@ class Kalman:
     u_k = np.zeros((2,1))                # control input vector
     r_k = np.zeros((2,2))                # ratio matrix
 
-    G_k[2][0] = 1
-    G_k[3][1] = 1
-    H_k[0][0] = 1
-    H_k[1][1] = 1
+
 
     alpha = 1
     beta = 1
@@ -81,13 +78,15 @@ class Kalman:
         [0,self.beta*self.dt],
         ])
         self.C_k = np.array([
-        [0,0,1/self.dt,0],
+        [0,0,-1/self.dt,0],
         [0,0,0,0]
         ])
         self.D_k = np.array([
-        [-self.alpha/self.dt,0],
+        [self.alpha/self.dt,0],
         [0,self.beta]
         ])
+        self.G_k[2][0] = self.alpha
+        self.G_k[3][1] = self.beta*self.dt
 
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.H_k.dot(self.Q_k).dot(self.H_k.T) + self.R_k

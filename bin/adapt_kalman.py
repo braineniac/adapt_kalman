@@ -28,9 +28,9 @@ class AdaptKalman(Kalman):
     w_k_pre = np.zeros((2,1))
     w_k = np.zeros((2,1))
     wsize = np.zeros((2,1))
-    # s = np.zeros((2,2))
-    #R_k_pre = np.zeros((2,2))
-    #R_k_set = False
+    s = np.zeros((2,2))
+    R_k_pre = np.zeros((2,2))
+    R_k_set = False
     window_list = ["sig", "exp"]
     plot_u = [[],[]]
     plot_y = [[],[]]
@@ -47,9 +47,9 @@ class AdaptKalman(Kalman):
         self.order[1][1] = o2
         self.wsize[0] = ws1
         self.wsize[1] = ws2
-        #self.R_k_pre = self.R_k
-        # self.s[0][0] = 1
-        # self.s[1][1] = 1
+        self.R_k_pre = self.R_k
+        self.s[0][0] = 1
+        self.s[1][1] = 1
 
     def filter_step(self, u=None, y=None,t=None):
         if u and t:
@@ -75,12 +75,12 @@ class AdaptKalman(Kalman):
         elif len(self.u_a[0]) >= self.N[0] and len(self.u_a[1]) >= self.N[1]:
                 self.w_k_pre = self.set_windows()
 
-        # if np.array_equal(np.identity(2), c_k):
-        #     self.R_k_set = False
-        #     self.R_k = self.R_k_pre
-        # elif not self.R_k_set:
-        #     self.R_k = self.R_k.dot(self.s)
-        #     self.R_k_set = True
+        if np.array_equal(np.identity(2), c_k):
+            self.R_k_set = False
+            self.R_k = self.R_k_pre
+        elif not self.R_k_set:
+            self.R_k = self.R_k.dot(self.s)
+            self.R_k_set = True
 
         r_k_post = c_k.dot(self.r_k)
         self.Q_k = self.R_k.dot(r_k_post)
