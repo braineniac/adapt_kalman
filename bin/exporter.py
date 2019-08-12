@@ -25,8 +25,7 @@ from adapt_kalman_sim_octagon import AdaptKalmanSimOctagon
 from ekf_reader import EKFReader
 
 class Exporter:
-    octagon_sim_time = 41.0
-    ratio1 = 0.001
+
     def __init__(self):
         self.bag_folder = "/home/dan/ws/rosbag/garry2/"
         folder_exists(self.bag_folder)
@@ -79,9 +78,109 @@ class Exporter:
         self.run_ekf(self.turn_bag)
         #self.export_ekf(self.line_bag, self.line_start, self.line_end)
         #self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
+        self.no_kalman_line()
+        self.no_kalman_turn()
         self.compare_multi_line()
         self.compare_multi_turn()
         plt.show()
+
+    def no_kalman_line(self):
+        single_bagpath = self.trans_folder + "trans_" + self.line_bag
+        multi_bagpath = self.trans_folder + "trans_" + self.line_multi_bag
+        if file_exists(single_bagpath) and file_exists(multi_bagpath):
+            single_kalman_bag_line = self.kalman_line_base
+            r1 = 99999.9
+            r2 = 99999.9
+            multi_kalman_bag_line =self.run_bag(multi_bagpath, self.alpha, self.beta,r1,r2, self.line_m_start,self.line_m_end)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.title("Comparison of single vs multi, no kalman")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Distance x [m]")
+            plt.plot(single_kalman_bag_line.plot_x[0][0], single_kalman_bag_line.plot_x[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_x0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.title("Comparison of single vs multi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Velocity v [m/s]")
+            plt.plot(single_kalman_bag_line.plot_x[2][0], single_kalman_bag_line.plot_x[2][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_x2.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1]]),header='t v', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_nokalman_states.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.title("Fake wheel encoder input")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Speed in x [m/s]")
+            plt.plot(single_kalman_bag_line.plot_u[0][0], single_kalman_bag_line.plot_u[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_u[0][0], multi_kalman_bag_line.plot_u[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_u0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_u[0][0],multi_kalman_bag_line.plot_u[0][1]]),header='t u0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.title("Acceleration output")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Accel in x [m/s2]")
+            plt.plot(single_kalman_bag_line.plot_y[0][0], single_kalman_bag_line.plot_y[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_y[0][0], multi_kalman_bag_line.plot_y[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_y0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_y[0][0],multi_kalman_bag_line.plot_y[0][1]]),header='t y0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_nokalman_u0y0.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+
+    def no_kalman_turn(self):
+        single_bagpath = self.trans_folder + "trans_" + self.turn_bag
+        multi_bagpath = self.trans_folder + "trans_" + self.turn_multi_bag
+        if file_exists(single_bagpath) and file_exists(multi_bagpath):
+            single_kalman_bag_turn = self.kalman_turn_base
+            r1 =99999.9
+            r2 =99999.9
+            multi_kalman_bag_turn =self.run_bag(multi_bagpath, self.alpha, self.beta,r1,r2, self.turn_m_start,self.turn_m_end)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.title("Comparison of single vs multi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Phi [degrees]")
+            plt.plot(single_kalman_bag_turn.plot_x[3][0], single_kalman_bag_turn.plot_x[3][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_x3.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1]]),header='t phi', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_nokalman_x3.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.xlabel("Time [s]")
+            plt.ylabel("Joystick angular z input [rad/s]")
+            plt.plot(single_kalman_bag_turn.plot_u[1][0], single_kalman_bag_turn.plot_u[1][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_u[1][0], multi_kalman_bag_turn.plot_u[1][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_u1.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_u[1][0],multi_kalman_bag_turn.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.xlabel("Time [s]")
+            plt.ylabel("Gyro output[rad/s]")
+            plt.plot(single_kalman_bag_turn.plot_y[1][0], single_kalman_bag_turn.plot_y[1][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_y[1][0], multi_kalman_bag_turn.plot_y[1][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_nokalman_y1.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_turn.plot_y[1][0],multi_kalman_bag_turn.plot_y[1][1]]),header='t y1', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_nokalman_u1y1.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
 
     def compare_multi_line(self):
         single_bagpath = self.trans_folder + "trans_" + self.line_bag
@@ -99,7 +198,7 @@ class Exporter:
             plt.ylabel("Distance x [m]")
             plt.plot(single_kalman_bag_line.plot_x[0][0], single_kalman_bag_line.plot_x[0][1], "b", label="single")
             plt.plot(multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_x0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_x0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
             plt.subplot(212)
@@ -108,10 +207,10 @@ class Exporter:
             plt.ylabel("Velocity v [m/s]")
             plt.plot(single_kalman_bag_line.plot_x[2][0], single_kalman_bag_line.plot_x[2][1], "b", label="single")
             plt.plot(multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_x2.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1]]),header='t v', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_x2.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1]]),header='t v', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
-            plt.savefig("{}/multi_{}_states.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+            plt.savefig("{}/multi_{}_comp_states.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
@@ -122,7 +221,7 @@ class Exporter:
             plt.ylabel("Speed in x [m/s]")
             plt.plot(single_kalman_bag_line.plot_u[0][0], single_kalman_bag_line.plot_u[0][1], "b", label="single")
             plt.plot(multi_kalman_bag_line.plot_u[0][0], multi_kalman_bag_line.plot_u[0][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_u0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_u[0][0],multi_kalman_bag_line.plot_u[0][1]]),header='t u0', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_u0.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_line.plot_u[0][0],multi_kalman_bag_line.plot_u[0][1]]),header='t u0', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
             plt.subplot(212)
@@ -131,10 +230,10 @@ class Exporter:
             plt.ylabel("Accel in x [m/s2]")
             plt.plot(single_kalman_bag_line.plot_y[0][0], single_kalman_bag_line.plot_y[0][1], "b", label="single")
             plt.plot(multi_kalman_bag_line.plot_y[0][0], multi_kalman_bag_line.plot_y[0][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_y0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_y[0][0],multi_kalman_bag_line.plot_y[0][1]]),header='t y0', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_y0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_y[0][0],multi_kalman_bag_line.plot_y[0][1]]),header='t y0', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
-            plt.savefig("{}/multi_{}_u0y0.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+            plt.savefig("{}/multi_{}_comp_u0y0.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
 
     def compare_multi_turn(self):
         single_bagpath = self.trans_folder + "trans_" + self.turn_bag
@@ -151,10 +250,10 @@ class Exporter:
             plt.ylabel("Phi [degrees]")
             plt.plot(single_kalman_bag_turn.plot_x[3][0], single_kalman_bag_turn.plot_x[3][1], "b", label="single")
             plt.plot(multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_x3.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1]]),header='t phi', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_x3.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1]]),header='t phi', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
-            plt.savefig("{}/multi_{}_x3.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
+            plt.savefig("{}/multi_{}_comp_x3.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
@@ -164,7 +263,7 @@ class Exporter:
             plt.ylabel("Joystick angular z input [rad/s]")
             plt.plot(single_kalman_bag_turn.plot_u[1][0], single_kalman_bag_turn.plot_u[1][1], "b", label="single")
             plt.plot(multi_kalman_bag_turn.plot_u[1][0], multi_kalman_bag_turn.plot_u[1][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_u1.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_turn.plot_u[1][0],multi_kalman_bag_turn.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_u1.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_u[1][0],multi_kalman_bag_turn.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
             plt.subplot(212)
@@ -172,10 +271,10 @@ class Exporter:
             plt.ylabel("Gyro output[rad/s]")
             plt.plot(single_kalman_bag_turn.plot_y[1][0], single_kalman_bag_turn.plot_y[1][1], "b", label="single")
             plt.plot(multi_kalman_bag_turn.plot_y[1][0], multi_kalman_bag_turn.plot_y[1][1], "r", label="multi")
-            np.savetxt("{}/multi_{}_y1.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_turn.plot_y[1][0],multi_kalman_bag_turn.plot_y[1][1]]),header='t y1', comments='# ',delimiter=' ', newline='\n')
+            np.savetxt("{}/multi_{}_comp_y1.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_y[1][0],multi_kalman_bag_turn.plot_y[1][1]]),header='t y1', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
-            plt.savefig("{}/multi_{}_u1y1.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+            plt.savefig("{}/multi_{}_comp_u1y1.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
 
     def transform_rosbag(self, bag_name=None):
         input_bag_file = self.bag_folder + bag_name
