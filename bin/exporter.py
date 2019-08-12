@@ -34,22 +34,33 @@ class Exporter:
         folder_exists(self.img_folder)
         self.plot_folder = self.bag_folder + "data/"
         folder_exists(self.plot_folder)
-        self.bag_trans = self.bag_folder + "trans/"
-        folder_exists(self.bag_trans)
+        self.trans_folder = self.bag_folder + "trans/"
+        folder_exists(self.trans_folder)
         self.ekf_folder = self.bag_folder + "ekf/"
         folder_exists(self.ekf_folder)
 
         self.line_bag = "74cm.bag"
-        self.line_m_bag = "74cm_mult.bag"
+        self.line_multi_bag = "74cm_mult.bag"
         self.turn_bag = "95degrees.bag"
-        self.turn_m_bag = "360degrees.bag"
+        self.turn_multi_bag = "360degrees.bag"
         self.octagon_bag = "loops_56cm.bag"
+
+        self.kalman_line_base =None
+        self.kalman_turn_base = None
 
         self.line_start=0
         self.line_end=np.inf
 
+        self.line_m_start = 0
+        self.line_m_end= np.inf
+
         self.turn_start=0
         self.turn_end=np.inf
+
+        self.turn_m_start=0
+        self.turn_m_end=np.inf
+
+        self.fig_count = 1
 
         self.alpha = 1
         self.beta= 1
@@ -60,16 +71,115 @@ class Exporter:
 
         self.transform_rosbag(self.line_bag)
         self.transform_rosbag(self.turn_bag)
-        #self.export_line()
-        #self.export_turn()
+        self.transform_rosbag(self.turn_multi_bag)
+        self.transform_rosbag(self.line_multi_bag)
+        self.export_line()
+        self.export_turn()
         self.run_ekf(self.line_bag)
         self.run_ekf(self.turn_bag)
-        self.export_ekf(self.line_bag, self.line_start, self.line_end)
-        self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
+        #self.export_ekf(self.line_bag, self.line_start, self.line_end)
+        #self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
+        self.compare_multi_line()
+        self.compare_multi_turn()
+        plt.show()
+
+    def compare_multi_line(self):
+        single_bagpath = self.trans_folder + "trans_" + self.line_bag
+        multi_bagpath = self.trans_folder + "trans_" + self.line_multi_bag
+        if file_exists(single_bagpath) and file_exists(multi_bagpath):
+            single_kalman_bag_line = self.kalman_line_base
+            multi_kalman_bag_line =self.run_bag(multi_bagpath, self.alpha, self.beta,self.r1,self.r2, self.line_m_start,self.line_m_end)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.title("Comparison of single vs multi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Distance x [m]")
+            plt.plot(single_kalman_bag_line.plot_x[0][0], single_kalman_bag_line.plot_x[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_x0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[0][0],multi_kalman_bag_line.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.title("Comparison of single vs multi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Velocity v [m/s]")
+            plt.plot(single_kalman_bag_line.plot_x[2][0], single_kalman_bag_line.plot_x[2][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_x2.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_x[2][0],multi_kalman_bag_line.plot_x[2][1]]),header='t v', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_states.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.title("Fake wheel encoder input")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Speed in x [m/s]")
+            plt.plot(single_kalman_bag_line.plot_u[0][0], single_kalman_bag_line.plot_u[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_u[0][0], multi_kalman_bag_line.plot_u[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_u0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_u[0][0],multi_kalman_bag_line.plot_u[0][1]]),header='t u0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.title("Acceleration output")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Accel in x [m/s2]")
+            plt.plot(single_kalman_bag_line.plot_y[0][0], single_kalman_bag_line.plot_y[0][1], "b", label="single")
+            plt.plot(multi_kalman_bag_line.plot_y[0][0], multi_kalman_bag_line.plot_y[0][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_y0.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_line.plot_y[0][0],multi_kalman_bag_line.plot_y[0][1]]),header='t y0', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_u0y0.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
+
+    def compare_multi_turn(self):
+        single_bagpath = self.trans_folder + "trans_" + self.turn_bag
+        multi_bagpath = self.trans_folder + "trans_" + self.turn_multi_bag
+        if file_exists(single_bagpath) and file_exists(multi_bagpath):
+            single_kalman_bag_turn = self.kalman_turn_base
+            multi_kalman_bag_turn =self.run_bag(multi_bagpath, self.alpha, self.beta,self.r1,self.r2, self.turn_m_start,self.turn_m_end)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.title("Comparison of single vs multi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Phi [degrees]")
+            plt.plot(single_kalman_bag_turn.plot_x[3][0], single_kalman_bag_turn.plot_x[3][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_x3.csv".format(self.plot_folder,self.turn_bag), np.transpose([multi_kalman_bag_turn.plot_x[3][0],multi_kalman_bag_turn.plot_x[3][1]]),header='t phi', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_x3.png".format(self.img_folder, self.turn_bag), quality=95, dpi=300)
+
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
+            plt.subplot(211)
+            plt.xlabel("Time [s]")
+            plt.ylabel("Joystick angular z input [rad/s]")
+            plt.plot(single_kalman_bag_turn.plot_u[1][0], single_kalman_bag_turn.plot_u[1][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_u[1][0], multi_kalman_bag_turn.plot_u[1][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_u1.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_turn.plot_u[1][0],multi_kalman_bag_turn.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.subplot(212)
+            plt.xlabel("Time [s]")
+            plt.ylabel("Gyro output[rad/s]")
+            plt.plot(single_kalman_bag_turn.plot_y[1][0], single_kalman_bag_turn.plot_y[1][1], "b", label="single")
+            plt.plot(multi_kalman_bag_turn.plot_y[1][0], multi_kalman_bag_turn.plot_y[1][1], "r", label="multi")
+            np.savetxt("{}/multi_{}_y1.csv".format(self.plot_folder,self.line_bag), np.transpose([multi_kalman_bag_turn.plot_y[1][0],multi_kalman_bag_turn.plot_y[1][1]]),header='t y1', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
+
+            plt.savefig("{}/multi_{}_u1y1.png".format(self.img_folder, self.line_bag), quality=95, dpi=300)
 
     def transform_rosbag(self, bag_name=None):
         input_bag_file = self.bag_folder + bag_name
-        output_bag_file = self.bag_trans + "trans_" + bag_name
+        output_bag_file = self.trans_folder + "trans_" + bag_name
         if file_exists(input_bag_file) and not file_exists(output_bag_file):
             # set roslaunch logging
             uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
@@ -88,9 +198,9 @@ class Exporter:
             parent.start()
             parent.spin()
 
-    def run_bag(self,bagpath=None,alpha=1.0,beta=1.0,r1=1.0,r2=1.0,window_type="", time_start=0.0,time_finish=np.inf):
+    def run_bag(self,bagpath=None,alpha=1.0,beta=1.0,r1=1.0,r2=1.0, time_start=0.0,time_finish=np.inf,window_type=""):
         if file_exists(bagpath):
-            adapt_kalman_bag = AdaptKalmanBag(bagpath=bagpath, alpha=alpha,beta=beta,r1=self.r1,r2=self.r2)
+            adapt_kalman_bag = AdaptKalmanBag(bagpath=bagpath, alpha=alpha,beta=beta,r1=r1,r2=r2)
             adapt_kalman_bag.read_imu("/imu_out/data")
             adapt_kalman_bag.read_twist("/fake_encoder/twist")
             adapt_kalman_bag.upscale_twist()
@@ -100,19 +210,24 @@ class Exporter:
 
     def export_line(self):
         line_bag = "trans_" + self.line_bag
-        line_bag_path = self.bag_trans + line_bag
+        line_bag_path = self.trans_folder + line_bag
         alpha = self.alpha
+        beta = self.beta
+        r1 = self.r1
+        r2 = self.r2
         t_s = self.line_start
         t_e = self.line_end
         if file_exists(line_bag_path):
 
-            kalman_line_base = self.run_bag(alpha=alpha,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_line_plus10 = self.run_bag(alpha=alpha*1.1,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_line_plus20 = self.run_bag(alpha=alpha*1.2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_line_minus10 = self.run_bag(alpha=alpha*0.9,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_line_minus20 = self.run_bag(alpha=alpha*0.8,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_line_base = self.run_bag(alpha=alpha,beta=beta,r1=r1,r2=r2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
+            self.kalman_line_base = kalman_line_base
+            kalman_line_plus10 = self.run_bag(alpha=alpha*1.1,beta=beta,r1=r1,r2=r2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_line_plus20 = self.run_bag(alpha=alpha*1.2,beta=beta,r1=r1,r2=r2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_line_minus10 = self.run_bag(alpha=alpha*0.9,beta=beta,r1=r1,r2=r2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_line_minus20 = self.run_bag(alpha=alpha*0.8,beta=beta,r1=r1,r2=r2,bagpath=line_bag_path,time_start=t_s,time_finish=t_e)
 
-            plt.figure(1, figsize=self.fig_dims)
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
             plt.subplot(411)
             plt.title("Comparison of different alphas in x")
             plt.xlabel("Time [s]")
@@ -189,23 +304,28 @@ class Exporter:
             plt.legend()
 
             plt.savefig("{}/alphas_{}.png".format(self.img_folder, line_bag), quality=95, dpi=300)
-            plt.show()
 
     def export_turn(self):
         turn_bag = "trans_" + self.turn_bag
-        turn_bag_path = self.bag_trans + turn_bag
+        turn_bag_path = self.trans_folder + turn_bag
         beta = self.beta
+        alpha = self.alpha
+        r1 = self.r1
+        r2 = self.r2
         t_s = self.turn_start
         t_e = self.turn_end
         if file_exists(turn_bag_path):
 
-            kalman_turn_base = self.run_bag(beta=beta,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_plus10 = self.run_bag(beta=beta*1.1,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_plus20 = self.run_bag(beta=beta*1.2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus10 = self.run_bag(beta=beta*0.9,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus20 = self.run_bag(beta=beta*0.8,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_base = self.run_bag(beta=beta,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            self.kalman_turn_base = kalman_turn_base
+            kalman_turn_plus10 = self.run_bag(beta=beta*1.1,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_plus20 = self.run_bag(beta=beta*1.2,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus10 = self.run_bag(beta=beta*0.9,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus20 = self.run_bag(beta=beta*0.8,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
 
-            plt.figure(2, figsize=self.fig_dims)
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
+
             plt.subplot(511)
             plt.title("Comparison of different betas in x")
             plt.xlabel("Time [s]")
@@ -302,7 +422,6 @@ class Exporter:
             plt.legend()
 
             plt.savefig("{}/betas_{}.png".format(self.img_folder, turn_bag), quality=95, dpi=300)
-            plt.show()
 
     def run_ekf(self, bag_name=None):
         rosbag = self.bag_folder + bag_name
@@ -335,7 +454,8 @@ class Exporter:
             ekf_reader.read_odom("/odometry/filtered")
             ekf_reader.add_plots(start_t,end_t)
 
-            plt.figure(3, figsize=self.fig_dims)
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
 
             plt.subplot(411)
             plt.title("EKF in x")
@@ -367,7 +487,8 @@ class Exporter:
 
             plt.savefig(self.img_folder+ "ekf_" + bagname.split("/")[0]+ "_states.png", quality=95, dpi=300)
 
-            plt.figure(4, figsize=self.fig_dims)
+            plt.figure(self.fig_count, figsize=self.fig_dims)
+            self.fig_count += 1
             plt.title("EKF in xy")
             plt.xlabel("Distance [x]")
             plt.ylabel("Distance [y]")
@@ -375,8 +496,6 @@ class Exporter:
             np.savetxt("{}/ekf_{}_xy.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[0][0],ekf_reader.plot_x[1][0]]),header='x y', comments='# ',delimiter=' ', newline='\n')
 
             plt.savefig(self.img_folder+ "ekf_" + bagname.split("/")[0]+ "_xy.png", quality=95, dpi=300)
-
-            plt.show()
 
 if __name__ == '__main__':
 
