@@ -15,40 +15,37 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-class Kalman:
-
-    L_k = np.zeros((4,1))                # Kalman gain matrix
-    x_k_pre = np.zeros((4,1))            # A priori state vector
-    P_k_pre = np.zeros((4,4))            # A priori covariance matrix
-    x_k_post = np.zeros((4,1))           # A posteriori state vector
-    P_k_post = np.zeros((4,4))           # A posteriori covariance matrix
-    x_k_extr = np.zeros((4,1))           # extrapolated state vector
-    P_k_extr = np.zeros((4,4))           # extrapolated covariance matrix
-    C_k = np.zeros((2,4))                # measurement matrix
-    phi_k = np.zeros((4,4))              # dynamics matrix
-    D_k = np.zeros((2,2))                # measurement input matrix
-    gamma_k = np.zeros((4,2))            # control matrix
-    R_k = np.zeros((2,2))                # observation noise covaraiance matrix
-    Q_k = np.zeros((2,2))                # process noise covariance matrix
-    G_k = np.zeros((4,2))                #
-    H_k = np.zeros((2,2))                #
-    y_k = np.zeros((2,1))                # observation vector
-    u_k = np.zeros((2,1))                # control input vector
-    r_k = np.zeros((2,2))                # ratio matrix
-
-
-
-    alpha = 1
-    beta = 1
-
-    t = 0.0
-    dt = 0.0
-    t_a = []
-    x_a = [[],[],[],[]]
-    u_a = [[],[]]
-    y_a = [[],[]]
+class Kalman(object):
 
     def __init__(self, r1=1/3., r2=1., alpha=1.,beta=1.,x0 = [0,0,0,0]):
+        self.L_k = np.zeros((4,1))                # Kalman gain matrix
+        self.x_k_pre = np.zeros((4,1))            # A priori state vector
+        self.P_k_pre = np.zeros((4,4))            # A priori covariance matrix
+        self.x_k_post = np.zeros((4,1))           # A posteriori state vector
+        self.P_k_post = np.zeros((4,4))           # A posteriori covariance matrix
+        self.x_k_extr = np.zeros((4,1))           # extrapolated state vector
+        self.P_k_extr = np.zeros((4,4))           # extrapolated covariance matrix
+        self.C_k = np.zeros((2,4))                # measurement matrix
+        self.phi_k = np.zeros((4,4))              # dynamics matrix
+        self.D_k = np.zeros((2,2))                # measurement input matrix
+        self.gamma_k = np.zeros((4,2))            # control matrix
+        self.R_k = np.zeros((2,2))                # observation noise covaraiance matrix
+        self.Q_k = np.zeros((2,2))                # process noise covariance matrix
+        self.G_k = np.zeros((4,2))                #
+        self.H_k = np.zeros((2,2))                #
+        self.y_k = np.zeros((2,1))                # observation vector
+        self.u_k = np.zeros((2,1))                # control input vector
+        self.r_k = np.zeros((2,2))                # ratio matrix
+
+        self.alpha = 1
+        self.beta = 1
+
+        self.t = 0.0
+        self.dt = 0.0
+        self.t_a = []
+        self.x_a = [[],[],[],[]]
+        self.u_a = [[],[]]
+        self.y_a = [[],[]]
         self.r_k[0][0] = r1
         self.r_k[1][1] = r2
         self.alpha = alpha

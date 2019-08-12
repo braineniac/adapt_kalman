@@ -1,0 +1,19 @@
+<launch>
+    <arg name="bag"/>
+    <arg name="output"/>
+    <arg name="node_start_delay" default="2.0"/>
+
+    <include file="$(find garry-description)/launch/state.launch"/>
+
+    <remap from="/imu" to="/imu_in/data"/>
+    <remap from="/imu/mag" to="/imu_in/mag"/>
+
+    <node name="imu_trans_node" pkg="imu_transformer" type="imu_transformer_node" output="screen">
+        <param name="target_frame" value="base_link"/>
+    </node>
+
+    <node pkg="rosbag" type="play" name="play_node" output="screen" args="--clock $(arg bag)" required="true" launch-prefix="zsh -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+    <node pkg="rosbag" type="record" name="record_node" output="screen" args="-a -O $(arg output)"/>
+
+</launch>

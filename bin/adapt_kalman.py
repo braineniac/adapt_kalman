@@ -19,27 +19,29 @@ from matplotlib import pyplot as plt
 from kalman import Kalman
 
 class AdaptKalman(Kalman):
-    delta_w_hat = np.zeros((2,1))  # delta_w peak vector
-    u = [[],[]]                    # all control input vectors
-    y = [[],[]]                    # all measuremnt vectors
-    r_a = [[[],[]],[[],[]]]
-    order = np.zeros((2,2))
-    N = np.zeros((2,1))
-    w_k_pre = np.zeros((2,1))
-    w_k = np.zeros((2,1))
-    wsize = np.zeros((2,1))
-    s = np.zeros((2,2))
-    R_k_pre = np.zeros((2,2))
-    R_k_set = False
-    window_list = ["sig", "exp"]
-    plot_u = [[],[]]
-    plot_y = [[],[]]
-    plot_x = [[],[],[],[]]
-    plot_xy = []
-    plot_r = [[],[]]
+
 
     def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1,x0=[0,0,0,0]):
-        Kalman.__init__(self, r1=r1, r2=r2, alpha=alpha,beta=beta,x0=x0)
+        super(AdaptKalman,self).__init__(r1=r1, r2=r2, alpha=alpha,beta=beta,x0=x0)
+        self.delta_w_hat = np.zeros((2,1))  # delta_w peak vector
+        self.u = [[],[]]                    # all control input vectors
+        self.y = [[],[]]                    # all measuremnt vectors
+        self.r_a = [[[],[]],[[],[]]]
+        self.order = np.zeros((2,2))
+        self.N = np.zeros((2,1))
+        self.w_k_pre = np.zeros((2,1))
+        self.w_k = np.zeros((2,1))
+        self.wsize = np.zeros((2,1))
+        self.s = np.zeros((2,2))
+        self.R_k_pre = np.zeros((2,2))
+        self.R_k_set = False
+        self.window_list = ["sig", "exp"]
+        self.plot_u = [[],[]]
+        self.plot_y = [[],[]]
+        self.plot_x = [[],[],[],[]]
+        self.plot_xy = []
+        self.plot_r = [[],[]]
+
         self.window_type = window_type
         self.N[0] = ws1
         self.N[1] = ws2
@@ -164,6 +166,23 @@ class AdaptKalman(Kalman):
             psi_a.append(psi*180/np.pi)
         self.x_a[3] = psi_a
 
+    def add_plots(self, start=0, finish=np.inf):
+        begin,end = self.find_slice(start,finish)
+        self.set_zero_time(begin)
+        self.psi_fix()
+
+        self.plot_x[0] = (self.t_a[begin:-end],self.x_a[0][begin:-end])
+        self.plot_x[1] = (self.t_a[begin:-end], self.x_a[1][begin:-end])
+        self.plot_x[2] = (self.t_a[begin:-end], self.x_a[2][begin:-end])
+        self.plot_x[3] = (self.t_a[begin:-end],self.x_a[3][begin:-end])
+        self.plot_xy = (self.x_a[0][begin:-end],self.x_a[1][begin:-end])
+        self.plot_u[0] = (self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
+        self.plot_u[1] = (self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
+        self.plot_y[0] = (self.t_a[begin:-end],self.y_a[0][begin:-end])
+        self.plot_y[1] = (self.t_a[begin:-end],self.y_a[1][begin:-end])
+        self.plot_r[0] = (self.t_a[begin:-end],self.r_a[0][0][begin:-end])
+        self.plot_r[1] = (self.t_a[begin:-end],self.r_a[1][1][begin:-end])
+
     def plot_all(self, start=0.0,finish=np.Inf):
         begin,end = self.find_slice(start,finish)
         self.set_zero_time(begin)
@@ -216,7 +235,7 @@ class AdaptKalman(Kalman):
 
         plt.subplot(414)
         plt.title("gyro input")
-        self.plot_y[0] = plt.plot(self.t_a[begin:-end],self.y_a[1][begin:-end])
+        self.plot_y[1] = plt.plot(self.t_a[begin:-end],self.y_a[1][begin:-end])
 
         plt.figure(4)
 
