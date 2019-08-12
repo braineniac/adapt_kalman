@@ -23,12 +23,12 @@ from geometry_msgs.msg import Quaternion
 
 class EKFReader:
 
-    x_ekf = [[],[],[],[]]
-    t = []
-    plot_x = [[],[],[],[]]
-    plot_xy = []
-
     def __init__(self, bag_path=""):
+        self.x_ekf = [[],[],[],[]]
+        self.t = []
+        self.plot_x = [[],[],[],[]]
+        self.plot_xy = []
+        self.plot_t = []
         self.bag_path = bag_path
 
     def read_odom(self, odom_topic):
@@ -48,7 +48,7 @@ class EKFReader:
             self.x_ekf[0].append(pos_x)
             self.x_ekf[1].append(pos_y)
             self.x_ekf[2].append(vel_x)
-            self.x_ekf[3].append(yaw)
+            self.x_ekf[3].append(yaw * 180.0/np.pi)
             self.t.append(t)
 
         self.plot_t = np.abs(np.array(self.t) - self.t[0])
@@ -73,10 +73,19 @@ class EKFReader:
 
     def set_zero_time(self, begin):
         new_t_array = []
-        print(self.t[begin])
         for elem in self.t:
             new_t_array.append(elem - self.t[begin])
         self.t = new_t_array
+
+    def add_plots(self, start_t=0, end_t=np.inf):
+        begin,end = self.find_slice(start_t,end_t)
+        self.set_zero_time(begin)
+
+        self.plot_x[0] = (self.t[begin:-end],self.x_ekf[0][begin:-end])
+        self.plot_x[1] = (self.t[begin:-end],self.x_ekf[1][begin:-end])
+        self.plot_x[2] = (self.t[begin:-end], self.x_ekf[2][begin:-end])
+        self.plot_x[3] = (self.t[begin:-end],self.x_ekf[3][begin:-end])
+        self.plot_xy = (self.x_ekf[0][begin:-end],self.x_ekf[1][begin:-end])
 
     def plot_all(self, start_t=0, end_t=np.inf):
         begin,end = self.find_slice(start_t,end_t)
@@ -106,7 +115,7 @@ class EKFReader:
         plt.figure(2)
         self.plot_xy = plt.plot(self.x_ekf[0][begin:-end],self.x_ekf[1][begin:-end])
 
-        #plt.show()
+        plt.show()
 
     def export_loops(self, post=""):
 

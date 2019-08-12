@@ -1,0 +1,45 @@
+<launch>
+  <node name="robot_localization" pkg="robot_localization" type="ekf_localization_node">
+
+    <!-- general settings -->
+    <param name="print diagnostics" value="true"/>
+    <param name="frequency" value="10"/>
+    <param name="two_d_mode" value="true"/>
+    <param name="publish_tf" value="no"/>
+    <param name="world_frame" value="odom"/>
+    <param name="base_link_frame" value="base_link"/>
+    <param name="odom_frame" value="odom"/>
+    <!--param name="smooth_lagged_data" value="true"/-->
+    <rosparam param="initial_state">[0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0]</rosparam>
+
+    <!-- imu0 configuration -->
+    <param name="imu0" value="/imu/var"/>
+    <rosparam param="imu0_config">[false, false, false,
+                                   false, false, false,
+                                   false, false, false,
+                                   false, false, true,
+                                   true, false, false]</rosparam>
+    <!--param name="imu0_differential" value="true"/-->
+    <param name="imu0_nodelay" value="true"/>
+    <!--param name="imu0_queue_size" value="200"/>
+    <param name="imu0_relative" value="true"/-->
+    <param name="imu0_remove_gravitational_acceleration" value="true"/>!
+    <!--param name="imu0_angular_velocity_rejection_threshold" value="0.1"/-->
+    <!--param name="imu0_linear_acceleration_rejection_threshold" value="1.0"/-->
+
+    <param name="twist0" value="/fake_encoder/twist_var"/>
+    <rosparam param="twist0_config">[false, false, false,
+                                    false, false, false,
+                                    true, false, false,
+                                    false, false, true,
+                                    false, false, false]</rosparam>
+
+    <!--param name="twist0_queue_size" value="20"/-->
+    <!--param name="twist0_relative" value="true"/-->
+    <param name="twist0_nodelay" value="true"/>
+  </node>
+</launch>

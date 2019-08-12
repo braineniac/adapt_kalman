@@ -1,0 +1,25 @@
+<launch>
+  <arg name="bag"/>
+  <arg name="output"/>
+  <arg name="node_start_delay" default="5.0" />
+  <arg name="alpha"/>
+  <arg name="beta"/>
+  <arg name="r1"/>
+  <arg name="r2"/>
+
+  <include file="$(find garry-description)/launch/state.launch"/>
+
+  <node name="var_msgs_node" pkg="garry-robot" type="var_msgs_node.py" output="screen">
+  <param name="alpha" value="$(arg alpha)"/>
+  <param name="beta" value="$(arg beta)"/>
+  <param name="r1" value="$(arg r1)"/>
+  <param name="r2" value="$(arg r2)"/>
+  </node>
+
+  <include file="$(find adapt_kalman)/launch/localization.launch"/>
+
+  <node pkg="rosbag" type="play" name="play_node" output="screen" args="--clock $(arg bag)" required="true" launch-prefix="zsh -c 'sleep $(arg node_start_delay); $0 $@' " />
+
+  <node pkg="rosbag" type="record" name="record_node" output="screen" args="-a -O $(arg output)"/>
+
+</launch>

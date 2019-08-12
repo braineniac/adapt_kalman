@@ -36,6 +36,8 @@ class Exporter:
         folder_exists(self.plot_folder)
         self.bag_trans = self.bag_folder + "trans/"
         folder_exists(self.bag_trans)
+        self.ekf_folder = self.bag_folder + "ekf/"
+        folder_exists(self.ekf_folder)
 
         self.line_bag = "74cm.bag"
         self.line_m_bag = "74cm_mult.bag"
@@ -60,6 +62,10 @@ class Exporter:
         self.transform_rosbag(self.turn_bag)
         #self.export_line()
         #self.export_turn()
+        self.run_ekf(self.line_bag)
+        self.run_ekf(self.turn_bag)
+        self.export_ekf(self.line_bag, self.line_start, self.line_end)
+        self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
 
     def transform_rosbag(self, bag_name=None):
         input_bag_file = self.bag_folder + bag_name
@@ -185,7 +191,6 @@ class Exporter:
             plt.savefig("{}/alphas_{}.png".format(self.img_folder, line_bag), quality=95, dpi=300)
             plt.show()
 
-
     def export_turn(self):
         turn_bag = "trans_" + self.turn_bag
         turn_bag_path = self.bag_trans + turn_bag
@@ -297,6 +302,80 @@ class Exporter:
             plt.legend()
 
             plt.savefig("{}/betas_{}.png".format(self.img_folder, turn_bag), quality=95, dpi=300)
+            plt.show()
+
+    def run_ekf(self, bag_name=None):
+        rosbag = self.bag_folder + bag_name
+        output = self.ekf_folder + "ekf_" + bag_name
+        if file_exists(rosbag) and not file_exists(output):
+            uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
+            roslaunch.configure_logging(uuid)
+
+            # run transform launch file
+            cli_args = [
+            "adapt_kalman",
+            "ekf.launch",
+            "bag:={}".format(rosbag),
+            "output:={}".format(output),
+            "r1:={}".format(self.r1),
+            "r2:={}".format(self.r2),
+            "alpha:={}".format(self.alpha),
+            "beta:={}".format(self.beta)
+            ]
+            roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)
+            roslaunch_args = cli_args[2:]
+            parent = roslaunch.parent.ROSLaunchParent(uuid, [(roslaunch_file[0], roslaunch_args),])
+            parent.start()
+            parent.spin()
+
+    def export_ekf(self, bagname=None, start_t=0,end_t=np.inf):
+        bagpath = self.ekf_folder + "ekf_" + bagname
+        if file_exists(bagpath):
+            ekf_reader = EKFReader(bagpath)
+            ekf_reader.read_odom("/odometry/filtered")
+            ekf_reader.add_plots(start_t,end_t)
+
+            plt.figure(3, figsize=self.fig_dims)
+
+            plt.subplot(411)
+            plt.title("EKF in x")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Distance [m]")
+            plt.plot(ekf_reader.plot_x[0][0],ekf_reader.plot_x[0][1], "b")
+            np.savetxt("{}/ekf_{}_x0.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[0][0],ekf_reader.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
+
+            plt.subplot(412)
+            plt.title("EKF in y")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Distance [m]")
+            plt.plot(ekf_reader.plot_x[1][0],ekf_reader.plot_x[1][1], "b")
+            np.savetxt("{}/ekf_{}_x1.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[1][0],ekf_reader.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
+
+            plt.subplot(413)
+            plt.title("EKF in v")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Velocity [m/s]")
+            plt.plot(ekf_reader.plot_x[2][0],ekf_reader.plot_x[2][1], "b")
+            np.savetxt("{}/ekf_{}_x2.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[2][0],ekf_reader.plot_x[2][1]]),header='t x2', comments='# ',delimiter=' ', newline='\n')
+
+            plt.subplot(414)
+            plt.title("EKF in Psi")
+            plt.xlabel("Time [s]")
+            plt.ylabel("Phi [degrees]")
+            plt.plot(ekf_reader.plot_x[3][0],ekf_reader.plot_x[3][1], "b")
+            np.savetxt("{}/ekf_{}_x3.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[3][0],ekf_reader.plot_x[3][1]]),header='t x3', comments='# ',delimiter=' ', newline='\n')
+
+            plt.savefig(self.img_folder+ "ekf_" + bagname.split("/")[0]+ "_states.png", quality=95, dpi=300)
+
+            plt.figure(4, figsize=self.fig_dims)
+            plt.title("EKF in xy")
+            plt.xlabel("Distance [x]")
+            plt.ylabel("Distance [y]")
+            plt.plot(ekf_reader.plot_x[0][0],ekf_reader.plot_x[1][0], "b")
+            np.savetxt("{}/ekf_{}_xy.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[0][0],ekf_reader.plot_x[1][0]]),header='x y', comments='# ',delimiter=' ', newline='\n')
+
+            plt.savefig(self.img_folder+ "ekf_" + bagname.split("/")[0]+ "_xy.png", quality=95, dpi=300)
+
             plt.show()
 
 if __name__ == '__main__':
