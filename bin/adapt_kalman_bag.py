@@ -84,8 +84,7 @@ if __name__ == '__main__':
     parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")
     parser.add_argument("-r2", "--ratio2", type=float, default=1., help="Covariance ratio2")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
-    parser.add_argument("-ws1", "--window_size1", type=int, default=5, help="Window size1")
-    parser.add_argument("-ws2", "--window_size2", type=int, default=5, help="Window size2")
+    parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
     parser.add_argument("-o1", "--order1", type=int, default=3, help="Adaptive order1")
     parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
     parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
@@ -101,8 +100,7 @@ if __name__ == '__main__':
         r1=args.ratio1,
         r2=args.ratio2,
         window=args.window,
-        ws1=args.window_size1,
-        ws2=args.window_size2,
+        ws1=args.window_size,
         o1=args.order1,
         o2=args.order2,
         turn=args.turn

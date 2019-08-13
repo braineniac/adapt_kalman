@@ -20,38 +20,27 @@ from kalman import Kalman
 
 class AdaptKalman(Kalman):
 
-
-    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window_type="sig",ws1=5, ws2=5, o1=3, o2=1,x0=[0,0,0,0]):
+    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window="sig",ws=5, o1=3, o2=1,x0=[0,0,0,0]):
         super(AdaptKalman,self).__init__(r1=r1, r2=r2, alpha=alpha,beta=beta,x0=x0)
-        self.delta_w_hat = np.zeros((2,1))  # delta_w peak vector
         self.u = [[],[]]                    # all control input vectors
         self.y = [[],[]]                    # all measuremnt vectors
-        self.r_a = [[[],[]],[[],[]]]
-        self.order = np.zeros((2,2))
-        self.N = np.zeros((2,1))
-        self.w_k_pre = np.zeros((2,1))
-        self.w_k = np.zeros((2,1))
-        self.wsize = np.zeros((2,1))
-        self.s = np.zeros((2,2))
-        self.R_k_pre = np.zeros((2,2))
-        self.R_k_set = False
+        self.N = ws
+        self.M_k = np.zeros((2,2))
+        self.Ro_k = np.zeros((2,2))
+        self.Lambda_k = np.zeros((2,2))
+        self.window = window
+        self.M_k[0][0] = o1
+        self.M_k[1][1] = o2
+        self.Ro_k[0][0] = r1
+        self.Ro_k[1][1] = r2
         self.window_list = ["sig", "exp"]
+
         self.plot_u = [[],[]]
         self.plot_y = [[],[]]
         self.plot_x = [[],[],[],[]]
         self.plot_xy = []
         self.plot_r = [[],[]]
-
-        self.window_type = window_type
-        self.N[0] = ws1
-        self.N[1] = ws2
-        self.order[0][0] = o1
-        self.order[1][1] = o2
-        self.wsize[0] = ws1
-        self.wsize[1] = ws2
-        self.R_k_pre = self.R_k
-        self.s[0][0] = 1
-        self.s[1][1] = 1
+        self.r_a = [[],[]]
 
     def filter_step(self, u=None, y=None,t=None):
         if u and t:
@@ -59,42 +48,24 @@ class AdaptKalman(Kalman):
             self.filter_iter(u,y,t)
 
     def adapt_covar(self):
-        c_k = np.identity(2)
-
-        if len(self.u_a[0]) >= 2*self.N[0] and len(self.u_a[1]) >= 2*self.N[1]:
+        if len(self.u_a[0]) >= 2*self.N and len(self.u_a[1]) >= 2*self.N:
             w_k = self.set_windows()
-            w_k_pre = self.w_k_pre
-
-            delta_w_k = abs(w_k - w_k_pre)
-
-            self.set_peak(delta_w_k)
-
-            c_k = (self.order/10).dot(self.delta_w_hat).dot(delta_w_k.T) + np.identity(2)
-
-            # update for next iteration
-            self.w_k_pre = w_k
-
-        elif len(self.u_a[0]) >= self.N[0] and len(self.u_a[1]) >= self.N[1]:
-                self.w_k_pre = self.set_windows()
-
-        if np.array_equal(np.identity(2), c_k):
-            self.R_k_set = False
-            self.R_k = self.R_k_pre
-        elif not self.R_k_set:
-            self.R_k = self.R_k.dot(self.s)
-            self.R_k_set = True
-
-        r_k_post = c_k.dot(self.r_k)
-        self.Q_k = self.R_k.dot(r_k_post)
-        self.r_a[0][0].append(r_k_post[0][0])
-        self.r_a[0][1].append(r_k_post[0][1])
-        self.r_a[1][0].append(r_k_post[1][0])
-        self.r_a[1][1].append(r_k_post[1][1])
+            self.Lambda_k = np.identity(2)
+            if w_k[0] != 0.0:
+                self.Lambda_k[0][0] = abs(self.u_a[0][-1]) / abs(w_k[0])
+            if w_k[1] != 0.0:
+                self.Lambda_k[1][1] = abs(self.u_a[1][-1]) / abs(w_k[1])
+        print(self.M_k)
+        print(self.Lambda_k)
+        print(self.Ro_k)
+        self.Q_k = self.M_k.dot(self.Lambda_k).dot(self.Ro_k).dot(self.R_k)
+        self.r_a[0].append(self.M_k.dot(self.Lambda_k).dot(self.Ro_k)[0][0])
+        self.r_a[1].append(self.M_k.dot(self.Lambda_k).dot(self.Ro_k)[1][1])
 
     def set_windows(self):
         w_avg = np.zeros((2,1))
-        w_avg[0] = self.get_window_avg(self.u_a[0], self.N[0])
-        w_avg[1] = self.get_window_avg(self.u_a[1], self.N[1])
+        w_avg[0] = self.get_window_avg(self.u_a[0], self.N)
+        w_avg[1] = self.get_window_avg(self.u_a[1], self.N)
         return w_avg
 
     def get_window_avg(self, array, N):
@@ -102,19 +73,11 @@ class AdaptKalman(Kalman):
         avg = 0
         for i in range(0,N):
             window.append(array[-i-1])
-        if self.window_type == "exp":
+        if self.window == "exp":
             avg = self.exp_avg(window)
-        elif self.window_type == "sig":
+        elif self.window == "sig":
             avg = self.sig_avg(window)
         return avg
-
-    def set_peak(self, delta_w):
-        for row in delta_w:
-            for cell in delta_w:
-                row = int(row)
-                cell = int(cell)
-                if self.delta_w_hat[row][cell] < delta_w[row][cell]:
-                    self.delta_w_hat[row][cell] = 1/delta_w[row][cell]
 
     def sig_avg(self,array):
         n = len(array)
@@ -136,7 +99,6 @@ class AdaptKalman(Kalman):
         series = pd.Series(array)
         avg = np.average(series.ewm(span=len(array)).mean().values)
         return avg
-
 
     def find_slice(self, start=0.0, finish=np.Inf):
         begin = 0
@@ -241,11 +203,11 @@ class AdaptKalman(Kalman):
 
         plt.subplot(211)
         plt.title("Ratio 00")
-        self.plot_r[0] = plt.plot(self.t_a[begin:-end],self.r_a[0][0][begin:-end])
+        self.plot_r[0] = plt.plot(self.t_a[begin:-end],self.r_a[0][begin:-end])
 
         plt.subplot(212)
         plt.title("Ratio 11")
-        self.plot_r[1] = plt.plot(self.t_a[begin:-end],self.r_a[1][1][begin:-end])
+        self.plot_r[1] = plt.plot(self.t_a[begin:-end],self.r_a[1][begin:-end])
 
         plt.show()
 

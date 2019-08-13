@@ -19,12 +19,11 @@ import argparse
 from adapt_kalman import AdaptKalman
 
 class AdaptKalmanSimLine(AdaptKalman):
-    u_sim = [[],[]]
-    y_sim = [[],[]]
-    t_sim = []
 
-    def __init__(self, alpha=1.0, beta=1.0, N=200,sim_time=5.0,r1=1/3.,r2=1., window="sig", ws1=5, ws2=5, o1=3,o2=1):
-        AdaptKalman.__init__(self, alpha=alpha, beta=beta, r1=r1, r2=r2, window_type=window, ws1=ws1, ws2=ws2, o1=o1, o2=o2)
+    def __init__(self, alpha=1.0, beta=1.0, N=200,sim_time=5.0,r1=1/3.,r2=1., window="sig", ws=5, o1=3,o2=1):
+        super(AdaptKalmanSimLine, self).__init__(alpha=alpha, beta=beta, r1=r1, r2=r2, window=window, ws=ws, o1=o1, o2=o2)
+        self.u_sim = [[],[]]
+        self.y_sim = [[],[]]
         self.t_sim = np.linspace(0,sim_time,N)
         self.u_sim[0] = self.set_vel(sim_time,0.5,N)
         self.u_sim[1] = np.zeros(len(self.u_sim[0]))
@@ -101,8 +100,7 @@ if __name__ == '__main__':
     parser.add_argument("-r1", "--ratio1", type=float, default=1/3., help="Covariance ratio1")
     parser.add_argument("-r2", "--ratio2", type=float, default=1., help="Covariance ratio2")
     parser.add_argument("-w", "--window", type=str, default="", help="Window type: sig or exp")
-    parser.add_argument("-ws1", "--window_size1", type=int, default=5, help="Window size1")
-    parser.add_argument("-ws2", "--window_size2", type=int, default=5, help="Window size2")
+    parser.add_argument("-ws", "--window_size", type=int, default=5, help="Window size")
     parser.add_argument("-o1", "--order1", type=int, default=3, help="Adaptive order1")
     parser.add_argument("-o2", "--order2", type=int, default=3, help="Adaptive order2")
     parser.add_argument("-t0", "--begin", type=float, default=0, help="Beginning of the slice")
@@ -118,12 +116,11 @@ if __name__ == '__main__':
         r1=args.ratio1,
         r2=args.ratio2,
         window=args.window,
-        ws1=args.window_size1,
-        ws2=args.window_size2,
+        ws=args.window_size,
         o1=args.order1,
         o2=args.order2
         )
 
     adapt_kalman_sim_line.run_filter()
     adapt_kalman_sim_line.plot_all(args.begin,args.end)
-    adapt_kalman_sim_line.export_all(args.begin,args.end, "sim_circle", args.post)
+    #adapt_kalman_sim_line.export_all(args.begin,args.end, "sim_circle", args.post)
