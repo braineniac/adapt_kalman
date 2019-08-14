@@ -27,7 +27,7 @@ from ekf_reader import EKFReader
 class Exporter:
 
     def __init__(self):
-        self.bag_folder = "/home/dan/ws/rosbag/garry2/"
+        self.bag_folder = "/home/dan/ws/rosbag/garry3/"
         folder_exists(self.bag_folder)
         self.img_folder = self.bag_folder + "images/"
         folder_exists(self.img_folder)
@@ -38,11 +38,11 @@ class Exporter:
         self.ekf_folder = self.bag_folder + "ekf/"
         folder_exists(self.ekf_folder)
 
-        self.line_bag = "74cm.bag"
-        self.line_multi_bag = "74cm_mult.bag"
-        self.turn_bag = "95degrees.bag"
-        self.turn_multi_bag = "360degrees.bag"
-        self.octagon_bag = "loops_56cm.bag"
+        self.line_bag = "5m_medium2.bag"
+        self.line_multi_bag = "5m_m.bag"
+        self.turn_bag = "10turns.bag"
+        self.turn_multi_bag = "10turns_m.bag"
+        self.octagon_bag = "loops_5-6.bag"
 
         self.kalman_line_base =None
         self.kalman_turn_base = None
@@ -61,28 +61,41 @@ class Exporter:
 
         self.fig_count = 1
 
-        self.alpha = 1
-        self.beta= 1
-        self.r1= 0.01
-        self.r2=1
+        self.alpha = 1.65
+        self.beta= 10.4 #10.4
+        self.r1= 0.005
+        self.r2=9999
 
         self.fig_dims = [40,25]
 
+        self.run_transforms()
+        #self.run_ekfs()
+
+        #self.export_line()
+        self.export_turn()
+
+        #self.export_ekf(self.line_bag, self.line_start, self.line_end)
+        #self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
+        #self.export_ekf(self.line_multi_bag, self.line_start, self.line_end)
+        #self.export_ekf(self.turn_multi_bag,self.turn_start,self.turn_end)
+        #self.no_kalman_line()
+        #self.no_kalman_turn()
+        #self.compare_multi_line()
+        #self.compare_multi_turn()
+        plt.show()
+
+    def run_transforms(self):
         self.transform_rosbag(self.line_bag)
         self.transform_rosbag(self.turn_bag)
         self.transform_rosbag(self.turn_multi_bag)
         self.transform_rosbag(self.line_multi_bag)
-        self.export_line()
-        self.export_turn()
+
+    def run_ekfs(self):
         self.run_ekf(self.line_bag)
         self.run_ekf(self.turn_bag)
-        #self.export_ekf(self.line_bag, self.line_start, self.line_end)
-        #self.export_ekf(self.turn_bag,self.turn_start,self.turn_end)
-        self.no_kalman_line()
-        self.no_kalman_turn()
-        self.compare_multi_line()
-        self.compare_multi_turn()
-        plt.show()
+        self.run_ekf(self.line_bag)
+        self.run_ekf(self.line_multi_bag)
+        self.run_ekf(self.turn_multi_bag)
 
     def no_kalman_line(self):
         single_bagpath = self.trans_folder + "trans_" + self.line_bag
@@ -191,6 +204,7 @@ class Exporter:
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
+            plt.suptitle("{}/{}".format(single_bagpath,multi_bagpath))
 
             plt.subplot(211)
             plt.title("Comparison of single vs multi")
@@ -244,6 +258,7 @@ class Exporter:
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
+            plt.suptitle("{}/{}".format(single_bagpath,multi_bagpath))
 
             plt.title("Comparison of single vs multi")
             plt.xlabel("Time [s]")
@@ -327,6 +342,7 @@ class Exporter:
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
+            plt.suptitle("{}".format(line_bag_path))
             plt.subplot(411)
             plt.title("Comparison of different alphas in x")
             plt.xlabel("Time [s]")
@@ -417,13 +433,14 @@ class Exporter:
 
             kalman_turn_base = self.run_bag(beta=beta,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
             self.kalman_turn_base = kalman_turn_base
-            kalman_turn_plus10 = self.run_bag(beta=beta*1.1,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_plus20 = self.run_bag(beta=beta*1.2,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus10 = self.run_bag(beta=beta*0.9,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus20 = self.run_bag(beta=beta*0.8,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_plus10 = self.run_bag(beta=beta*1.01,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_plus20 = self.run_bag(beta=beta*1.02,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus10 = self.run_bag(beta=beta*0.99,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus20 = self.run_bag(beta=beta*0.98,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
+            plt.suptitle("{}".format(turn_bag_path))
 
             plt.subplot(511)
             plt.title("Comparison of different betas in x")
@@ -433,16 +450,16 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[0][0],kalman_turn_base.plot_x[0][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x0_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[0][0],kalman_turn_base.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1], "r",label=beta*1.1)
+            plt.plot(kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1], "r",label=beta*1.01)
             np.savetxt("{}/betas_{}_x0_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1], "m",label=beta*1.2)
+            plt.plot(kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1], "m",label=beta*1.02)
             np.savetxt("{}/betas_{}_x0_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1], "g",label=beta*0.9)
+            plt.plot(kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1], "g",label=beta*0.99)
             np.savetxt("{}/betas_{}_x0_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1], "k",label=beta*0.8)
+            plt.plot(kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1], "k",label=beta*0.98)
             np.savetxt("{}/betas_{}_x0_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
@@ -455,16 +472,16 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[1][0],kalman_turn_base.plot_x[1][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x2_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[1][0],kalman_turn_base.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1], "r",label=beta*1.1)
+            plt.plot(kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1], "r",label=beta*1.01)
             np.savetxt("{}/betas_{}_x2_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1], "m",label=beta*1.2)
+            plt.plot(kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1], "m",label=beta*1.02)
             np.savetxt("{}/betas_{}_x2_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1], "g",label=beta*0.9)
+            plt.plot(kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1], "g",label=beta*0.99)
             np.savetxt("{}/betas_{}_x2_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1], "k",label=beta*0.8)
+            plt.plot(kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1], "k",label=beta*0.98)
             np.savetxt("{}/betas_{}_x2_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
@@ -477,17 +494,18 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[3][0],kalman_turn_base.plot_x[3][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x2_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[3][0],kalman_turn_base.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1], "r",label=beta*1.1)
+            plt.plot(kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1], "r",label=beta*1.01)
             np.savetxt("{}/betas_{}_x2_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1], "m",label=beta*1.2)
+            plt.plot(kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1], "m",label=beta*1.02)
             np.savetxt("{}/betas_{}_x2_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1], "g",label=beta*0.9)
+            plt.plot(kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1], "g",label=beta*0.99)
             np.savetxt("{}/betas_{}_x2_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1], "k",label=beta*0.8)
+            plt.plot(kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1], "k",label=beta*0.98)
             np.savetxt("{}/betas_{}_x2_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
+            plt.legend()
 
             plt.subplot(514)
             plt.title("Comparison of different betas, system input")
@@ -497,16 +515,16 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_u[1][0],kalman_turn_base.plot_u[1][1], "b",label=beta)
             np.savetxt("{}/betas_{}_u0_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_u[1][0],kalman_turn_base.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1], "r",label=beta*1.1)
+            plt.plot(kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1], "r",label=beta*1.01)
             np.savetxt("{}/betas_{}_u0_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1], "m",label=beta*1.2)
+            plt.plot(kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1], "m",label=beta*1.02)
             np.savetxt("{}/betas_{}_u0_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1], "g",label=beta*0.9)
+            plt.plot(kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1], "g",label=beta*0.99)
             np.savetxt("{}/betas_{}_u0_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1], "k",label=beta*0.8)
+            plt.plot(kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1], "k",label=beta*0.98)
             np.savetxt("{}/betas_{}_u0_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
@@ -555,6 +573,7 @@ class Exporter:
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
+            plt.suptitle("{}".format(bagpath))
 
             plt.subplot(411)
             plt.title("EKF in x")

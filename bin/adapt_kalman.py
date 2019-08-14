@@ -31,8 +31,8 @@ class AdaptKalman(Kalman):
         self.window = window
         self.M_k[0][0] = o1
         self.M_k[1][1] = o2
-        self.Ro_k[0][0] = r1
-        self.Ro_k[1][1] = r2
+        self.Ro_k[0][0] = r1*r1
+        self.Ro_k[1][1] = r2*r2
         self.window_list = ["sig", "exp"]
 
         self.plot_u = [[],[]]
@@ -43,7 +43,7 @@ class AdaptKalman(Kalman):
         self.r_a = [[],[]]
 
     def filter_step(self, u=None, y=None,t=None):
-        if u and t:
+        if u and y and t:
             self.adapt_covar()
             self.filter_iter(u,y,t)
 
@@ -52,15 +52,18 @@ class AdaptKalman(Kalman):
             w_k = self.set_windows()
             self.Lambda_k = np.identity(2)
             if w_k[0] != 0.0:
-                self.Lambda_k[0][0] = abs(self.u_a[0][-1]) / abs(w_k[0])
+                self.Lambda_k[0][0] = self.M_k[0][0] * abs(self.u_a[0][-1]) / abs(w_k[0])
             if w_k[1] != 0.0:
-                self.Lambda_k[1][1] = abs(self.u_a[1][-1]) / abs(w_k[1])
-        print(self.M_k)
-        print(self.Lambda_k)
-        print(self.Ro_k)
-        self.Q_k = self.M_k.dot(self.Lambda_k).dot(self.Ro_k).dot(self.R_k)
-        self.r_a[0].append(self.M_k.dot(self.Lambda_k).dot(self.Ro_k)[0][0])
-        self.r_a[1].append(self.M_k.dot(self.Lambda_k).dot(self.Ro_k)[1][1])
+                self.Lambda_k[1][1] = self.M_k[1][1] * abs(self.u_a[1][-1]) / abs(w_k[1])
+        #print(self.M_k)
+        #print(self.Lambda_k)
+        #print(self.Ro_k)
+        print(self.Q_k)
+        print(self.L_k)
+        #print(self.P_k_pre)
+        self.Q_k = self.Lambda_k.dot(self.Ro_k).dot(self.R_k)
+        self.r_a[0].append(self.Lambda_k.dot(self.Ro_k)[0][0])
+        self.r_a[1].append(self.Lambda_k.dot(self.Ro_k)[1][1])
 
     def set_windows(self):
         w_avg = np.zeros((2,1))
@@ -142,8 +145,8 @@ class AdaptKalman(Kalman):
         self.plot_u[1] = (self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
         self.plot_y[0] = (self.t_a[begin:-end],self.y_a[0][begin:-end])
         self.plot_y[1] = (self.t_a[begin:-end],self.y_a[1][begin:-end])
-        self.plot_r[0] = (self.t_a[begin:-end],self.r_a[0][0][begin:-end])
-        self.plot_r[1] = (self.t_a[begin:-end],self.r_a[1][1][begin:-end])
+        self.plot_r[0] = (self.t_a[begin:-end],self.r_a[0][begin:-end])
+        self.plot_r[1] = (self.t_a[begin:-end],self.r_a[1][begin:-end])
 
     def plot_all(self, start=0.0,finish=np.Inf):
         begin,end = self.find_slice(start,finish)

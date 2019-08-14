@@ -85,6 +85,7 @@ class Kalman(object):
         self.G_k[2][0] = self.alpha
         self.G_k[3][1] = self.beta*self.dt
 
+
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.H_k.dot(self.Q_k).dot(self.H_k.T) + self.R_k
         self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E))
@@ -101,6 +102,7 @@ class Kalman(object):
 
     def extr_error_covar(self):
         self.P_k_extr = self.phi_k.dot(self.P_k_post).dot(self.phi_k.T) + self.G_k.dot(self.Q_k).dot(self.G_k.T)
+        print(self.P_k_extr)
 
     def set_next_iter(self):
         self.x_k_pre = self.x_k_extr
@@ -110,7 +112,7 @@ class Kalman(object):
         if u and y and dt:
             self.dt = dt
             self.u_k[0] = u[0]
-            self.u_k[1] = u[1]
+            self.u_k[1] = 0#u[1]
             self.y_k[0] = y[0]
             self.y_k[1] = y[1]
 
