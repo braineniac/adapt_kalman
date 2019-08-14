@@ -23,7 +23,7 @@ from adapt_kalman import AdaptKalman
 class AdaptKalmanBag(AdaptKalman):
 
     def __init__(self, alpha=1.0,beta=1.0,bagpath=None, r1=1/3., r2 = 1.,window="",ws=5, o1=5, o2=5,turn=0.0):
-        super(AdaptKalmanBag,self).__init__(alpha=alpha, beta=beta, r1=r1, r2=r2, window=window, ws=ws, o1=o1, o2=o2, x0=[0,0,0,turn])
+        super(AdaptKalmanBag,self).__init__(alpha=alpha, beta=beta, r1=r1, r2=r2, window=window, ws=ws, o1=o1, o2=o2, x0=[0,0,0,turn,0])
         self.t_bag = []
         self.u_bag = [[],[]]
         self.y_bag = [[],[]]

@@ -20,7 +20,7 @@ from kalman import Kalman
 
 class AdaptKalman(Kalman):
 
-    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window="sig",ws=5, o1=3, o2=1,x0=[0,0,0,0]):
+    def __init__(self,alpha=1.0,beta=1.0,r1=1/3.,r2=1.0,window="sig",ws=5, o1=3, o2=1,x0=[0,0,0,0,0]):
         super(AdaptKalman,self).__init__(r1=r1, r2=r2, alpha=alpha,beta=beta,x0=x0)
         self.u = [[],[]]                    # all control input vectors
         self.y = [[],[]]                    # all measuremnt vectors
@@ -37,7 +37,7 @@ class AdaptKalman(Kalman):
 
         self.plot_u = [[],[]]
         self.plot_y = [[],[]]
-        self.plot_x = [[],[],[],[]]
+        self.plot_x = [[],[],[],[],[]]
         self.plot_xy = []
         self.plot_r = [[],[]]
         self.r_a = [[],[]]
@@ -58,8 +58,8 @@ class AdaptKalman(Kalman):
         #print(self.M_k)
         #print(self.Lambda_k)
         #print(self.Ro_k)
-        print(self.Q_k)
-        print(self.L_k)
+        #print(self.Q_k)
+        #print(self.L_k)
         #print(self.P_k_pre)
         self.Q_k = self.Lambda_k.dot(self.Ro_k).dot(self.R_k)
         self.r_a[0].append(self.Lambda_k.dot(self.Ro_k)[0][0])
@@ -133,13 +133,15 @@ class AdaptKalman(Kalman):
 
     def add_plots(self, start=0, finish=np.inf):
         begin,end = self.find_slice(start,finish)
-        self.set_zero_time(begin)
+        #self.set_zero_time(begin)
+        #print(begin,end)
         self.psi_fix()
 
         self.plot_x[0] = (self.t_a[begin:-end],self.x_a[0][begin:-end])
         self.plot_x[1] = (self.t_a[begin:-end], self.x_a[1][begin:-end])
         self.plot_x[2] = (self.t_a[begin:-end], self.x_a[2][begin:-end])
-        self.plot_x[3] = (self.t_a[begin:-end],self.x_a[3][begin:-end])
+        self.plot_x[3] = (self.t_a[begin:-end], self.x_a[3][begin:-end])
+        self.plot_x[4] = (self.t_a[begin:-end],self.x_a[4][begin:-end])
         self.plot_xy = (self.x_a[0][begin:-end],self.x_a[1][begin:-end])
         self.plot_u[0] = (self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
         self.plot_u[1] = (self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
