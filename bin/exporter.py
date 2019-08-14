@@ -61,17 +61,17 @@ class Exporter:
 
         self.fig_count = 1
 
-        self.alpha = 1.65
+        self.alpha = 1.65 #1.65
         self.beta= 10.4 #10.4
-        self.r1= 0.005
-        self.r2=9999
+        self.r1= 0.01
+        self.r2=0.8
 
         self.fig_dims = [40,25]
 
         self.run_transforms()
         #self.run_ekfs()
 
-        #self.export_line()
+        self.export_line()
         self.export_turn()
 
         #self.export_ekf(self.line_bag, self.line_start, self.line_end)
@@ -80,8 +80,8 @@ class Exporter:
         #self.export_ekf(self.turn_multi_bag,self.turn_start,self.turn_end)
         #self.no_kalman_line()
         #self.no_kalman_turn()
-        #self.compare_multi_line()
-        #self.compare_multi_turn()
+        self.compare_multi_line()
+        self.compare_multi_turn()
         plt.show()
 
     def run_transforms(self):
@@ -343,7 +343,7 @@ class Exporter:
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
             plt.suptitle("{}".format(line_bag_path))
-            plt.subplot(411)
+            plt.subplot(611)
             plt.title("Comparison of different alphas in x")
             plt.xlabel("Time [s]")
             plt.ylabel("Distance [m]")
@@ -365,7 +365,7 @@ class Exporter:
 
             plt.legend()
 
-            plt.subplot(412)
+            plt.subplot(612)
             plt.title("Comparison of different alphas in v")
             plt.xlabel("Time [s]")
             plt.ylabel("Velocity [m/s]")
@@ -387,7 +387,16 @@ class Exporter:
 
             plt.legend()
 
-            plt.subplot(413)
+
+            plt.subplot(613)
+            plt.title("Phi")
+            plt.plot(kalman_line_base.plot_x[3][0],kalman_line_base.plot_x[3][1])
+
+            plt.subplot(614)
+            plt.title("Phidot")
+            plt.plot(kalman_line_base.plot_x[4][0],kalman_line_base.plot_x[4][1])
+
+            plt.subplot(615)
             plt.title("Comparison of different alphas, system input")
             plt.xlabel("Time [s]")
             plt.ylabel("Velocity [m/s]")
@@ -409,7 +418,7 @@ class Exporter:
 
             plt.legend()
 
-            plt.subplot(414)
+            plt.subplot(716)
             plt.title("Comparison of different alphas, system output")
             plt.xlabel("Time [s]")
             plt.ylabel("Acceleration [m/s2]")
@@ -433,16 +442,16 @@ class Exporter:
 
             kalman_turn_base = self.run_bag(beta=beta,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
             self.kalman_turn_base = kalman_turn_base
-            kalman_turn_plus10 = self.run_bag(beta=beta*1.01,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_plus20 = self.run_bag(beta=beta*1.02,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus10 = self.run_bag(beta=beta*0.99,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
-            kalman_turn_minus20 = self.run_bag(beta=beta*0.98,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_plus10 = self.run_bag(beta=beta*1.1,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_plus20 = self.run_bag(beta=beta*1.2,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus10 = self.run_bag(beta=beta*0.9,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
+            kalman_turn_minus20 = self.run_bag(beta=beta*0.8,alpha=alpha,r1=r1,r2=r2,bagpath=turn_bag_path,time_start=t_s,time_finish=t_e)
 
             plt.figure(self.fig_count, figsize=self.fig_dims)
             self.fig_count += 1
             plt.suptitle("{}".format(turn_bag_path))
 
-            plt.subplot(511)
+            plt.subplot(711)
             plt.title("Comparison of different betas in x")
             plt.xlabel("Time [s]")
             plt.ylabel("Distance [m]")
@@ -450,21 +459,21 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[0][0],kalman_turn_base.plot_x[0][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x0_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[0][0],kalman_turn_base.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1], "r",label=beta*1.01)
+            plt.plot(kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1], "r",label=beta*1.1)
             np.savetxt("{}/betas_{}_x0_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[0][0],kalman_turn_plus10.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1], "m",label=beta*1.02)
+            plt.plot(kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1], "m",label=beta*1.2)
             np.savetxt("{}/betas_{}_x0_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[0][0],kalman_turn_plus20.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1], "g",label=beta*0.99)
+            plt.plot(kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1], "g",label=beta*0.9)
             np.savetxt("{}/betas_{}_x0_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[0][0],kalman_turn_minus10.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1], "k",label=beta*0.98)
+            plt.plot(kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1], "k",label=beta*0.8)
             np.savetxt("{}/betas_{}_x0_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[0][0],kalman_turn_minus20.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
 
-            plt.subplot(512)
+            plt.subplot(712)
             plt.title("Comparison of different betas in y")
             plt.xlabel("Time [s]")
             plt.ylabel("Distance [m/s]")
@@ -472,21 +481,26 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[1][0],kalman_turn_base.plot_x[1][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x2_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[1][0],kalman_turn_base.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1], "r",label=beta*1.01)
+            plt.plot(kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1], "r",label=beta*1.1)
             np.savetxt("{}/betas_{}_x2_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[1][0],kalman_turn_plus10.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1], "m",label=beta*1.02)
+            plt.plot(kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1], "m",label=beta*1.2)
             np.savetxt("{}/betas_{}_x2_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[1][0],kalman_turn_plus20.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1], "g",label=beta*0.99)
+            plt.plot(kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1], "g",label=beta*0.9)
             np.savetxt("{}/betas_{}_x2_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[1][0],kalman_turn_minus10.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1], "k",label=beta*0.98)
+            plt.plot(kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1], "k",label=beta*0.8)
             np.savetxt("{}/betas_{}_x2_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[1][0],kalman_turn_minus20.plot_x[1][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
 
-            plt.subplot(513)
+            plt.subplot(713)
+            plt.title("vel")
+            plt.plot(kalman_turn_base.plot_x[2][0],kalman_turn_base.plot_x[2][1])
+
+
+            plt.subplot(714)
             plt.title("Comparison of different betas in phi")
             plt.xlabel("Time [s]")
             plt.ylabel("Phi [degrees]")
@@ -494,20 +508,24 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_x[3][0],kalman_turn_base.plot_x[3][1], "b",label=beta)
             np.savetxt("{}/betas_{}_x2_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_x[3][0],kalman_turn_base.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1], "r",label=beta*1.01)
+            plt.plot(kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1], "r",label=beta*1.1)
             np.savetxt("{}/betas_{}_x2_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_x[3][0],kalman_turn_plus10.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1], "m",label=beta*1.02)
+            plt.plot(kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1], "m",label=beta*1.2)
             np.savetxt("{}/betas_{}_x2_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_x[3][0],kalman_turn_plus20.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1], "g",label=beta*0.99)
-            np.savetxt("{}/betas_{}_x2_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
+            plt.plot(kalman_turn_minus10.plot_x[3][0],kalman_turn_minus10.plot_x[3][1], "g",label=beta*0.9)
+            np.savetxt("{}/betas_{}_x2_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_x[4][0],kalman_turn_minus10.plot_x[4][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1], "k",label=beta*0.98)
-            np.savetxt("{}/betas_{}_x2_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
+            plt.plot(kalman_turn_minus20.plot_x[3][0],kalman_turn_minus20.plot_x[3][1], "k",label=beta*0.8)
+            np.savetxt("{}/betas_{}_x2_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_x[4][0],kalman_turn_minus20.plot_x[4][1]]),header='t x1', comments='# ',delimiter=' ', newline='\n')
             plt.legend()
 
-            plt.subplot(514)
+            plt.subplot(715)
+            plt.title("Phidot")
+            plt.plot(kalman_turn_base.plot_x[4][0],kalman_turn_base.plot_x[4][1])
+
+            plt.subplot(716)
             plt.title("Comparison of different betas, system input")
             plt.xlabel("Time [s]")
             plt.ylabel("Turn velocity [rad/s]")
@@ -515,21 +533,21 @@ class Exporter:
             plt.plot(kalman_turn_base.plot_u[1][0],kalman_turn_base.plot_u[1][1], "b",label=beta)
             np.savetxt("{}/betas_{}_u0_base.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_base.plot_u[1][0],kalman_turn_base.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1], "r",label=beta*1.01)
+            plt.plot(kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1], "r",label=beta*1.1)
             np.savetxt("{}/betas_{}_u0_plus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus10.plot_u[1][0],kalman_turn_plus10.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1], "m",label=beta*1.02)
+            plt.plot(kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1], "m",label=beta*1.2)
             np.savetxt("{}/betas_{}_u0_plus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_plus20.plot_u[1][0],kalman_turn_plus20.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1], "g",label=beta*0.99)
+            plt.plot(kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1], "g",label=beta*0.9)
             np.savetxt("{}/betas_{}_u0_minus10.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus10.plot_u[1][0],kalman_turn_minus10.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
-            plt.plot(kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1], "k",label=beta*0.98)
+            plt.plot(kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1], "k",label=beta*0.8)
             np.savetxt("{}/betas_{}_u0_minus20.csv".format(self.plot_folder,turn_bag), np.transpose([kalman_turn_minus20.plot_u[1][0],kalman_turn_minus20.plot_u[1][1]]),header='t u1', comments='# ',delimiter=' ', newline='\n')
 
             plt.legend()
 
-            plt.subplot(515)
+            plt.subplot(717)
             plt.title("Comparison of different betas, system output")
             plt.xlabel("Time [s]")
             plt.ylabel("Turn velocity [rad/s]")

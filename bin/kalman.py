@@ -15,23 +15,24 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
+
 class Kalman(object):
 
     def __init__(self, r1=1/3., r2=1., alpha=1.,beta=1.,x0 = [0,0,0,0]):
-        self.L_k = np.zeros((4,1))                # Kalman gain matrix
-        self.x_k_pre = np.zeros((4,1))            # A priori state vector
-        self.P_k_pre = np.zeros((4,4))            # A priori covariance matrix
-        self.x_k_post = np.zeros((4,1))           # A posteriori state vector
-        self.P_k_post = np.zeros((4,4))           # A posteriori covariance matrix
-        self.x_k_extr = np.zeros((4,1))           # extrapolated state vector
-        self.P_k_extr = np.zeros((4,4))           # extrapolated covariance matrix
-        self.C_k = np.zeros((2,4))                # measurement matrix
-        self.phi_k = np.zeros((4,4))              # dynamics matrix
+        self.L_k = np.zeros((5,2))                # Kalman gain matrix
+        self.x_k_pre = np.zeros((5,1))            # A priori state vector
+        self.P_k_pre = np.zeros((5,5))            # A priori covariance matrix
+        self.x_k_post = np.zeros((5,1))           # A posteriori state vector
+        self.P_k_post = np.zeros((5,5))           # A posteriori covariance matrix
+        self.x_k_extr = np.zeros((5,1))           # extrapolated state vector
+        self.P_k_extr = np.zeros((5,5))           # extrapolated covariance matrix
+        self.C_k = np.zeros((2,5))                # measurement matrix
+        self.phi_k = np.zeros((5,5))              # dynamics matrix
         self.D_k = np.zeros((2,2))                # measurement input matrix
-        self.gamma_k = np.zeros((4,2))            # control matrix
+        self.gamma_k = np.zeros((5,2))            # control matrix
         self.R_k = np.zeros((2,2))                # observation noise covaraiance matrix
         self.Q_k = np.zeros((2,2))                # process noise covariance matrix
-        self.G_k = np.zeros((4,2))                #
+        self.G_k = np.zeros((5,2))                #
         self.H_k = np.zeros((2,2))                #
         self.y_k = np.zeros((2,1))                # observation vector
         self.u_k = np.zeros((2,1))                # control input vector
@@ -43,7 +44,7 @@ class Kalman(object):
         self.t = 0.0
         self.dt = 0.0
         self.t_a = []
-        self.x_a = [[],[],[],[]]
+        self.x_a = [[],[],[],[],[],[]]
         self.u_a = [[],[]]
         self.y_a = [[],[]]
         self.r_k[0][0] = r1
@@ -59,35 +60,38 @@ class Kalman(object):
         self.Q_k[0][0] = fake_enc_stdev*fake_enc_stdev
         self.Q_k[1][1] = ang_z_stdev*ang_z_stdev
         x0[3] = x0[3] * np.pi/180.
-        self.x_k_pre = np.array(x0).reshape((4,1))
+        self.x_k_pre = np.array(x0).reshape((5,1))
 
     def set_time_delta(self):
         self.phi_k = np.array([
-        [1,0,self.dt*np.cos(self.x_k_post[3]),0],
-        [0,1,self.dt*np.sin(self.x_k_post[3]),0],
-        [0,0,0,0],
-        [0,0,0,1]
+        [1,0,self.dt*np.cos(self.x_k_post[3]),0,0],
+        [0,1,self.dt*np.sin(self.x_k_post[3]),0,0],
+        [0,0,0,0,0],
+        [0,0,0,1,self.dt],
+        [0,0,0,0,0]
         ])
         self.gamma_k = np.array([
         [0,0],
         [0,0],
         [self.alpha,0],
-        [0,self.beta*self.dt],
+        [0,0],
+        [0,self.beta]
         ])
         self.C_k = np.array([
-        [0,0,-1/self.dt,0],
-        [0,0,0,0]
+        [0,0,-1/self.dt,0,0],
+        [0,0,0,0,1]
         ])
         self.D_k = np.array([
         [self.alpha/self.dt,0],
-        [0,self.beta]
+        [0,0]
         ])
         self.G_k[2][0] = self.alpha
-        self.G_k[3][1] = self.beta*self.dt
+        self.G_k[4][1] = self.beta
 
 
     def set_gain(self):
         E = self.C_k.dot(self.P_k_pre).dot(self.C_k.T) + self.H_k.dot(self.Q_k).dot(self.H_k.T) + self.R_k
+
         self.L_k = self.P_k_pre.dot(self.C_k.T).dot(np.linalg.inv(E))
 
     def update_state(self):
@@ -95,14 +99,13 @@ class Kalman(object):
         self.x_k_post = self.x_k_pre + self.L_k.dot(F)
 
     def update_error_covar(self):
-        self.P_k_post = (np.identity(4) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
+        self.P_k_post = (np.identity(5) - self.L_k.dot(self.C_k)).dot(self.P_k_pre)
 
     def extr_state(self):
         self.x_k_extr = self.phi_k.dot(self.x_k_post) + self.gamma_k.dot(self.u_k)
 
     def extr_error_covar(self):
         self.P_k_extr = self.phi_k.dot(self.P_k_post).dot(self.phi_k.T) + self.G_k.dot(self.Q_k).dot(self.G_k.T)
-        print(self.P_k_extr)
 
     def set_next_iter(self):
         self.x_k_pre = self.x_k_extr
@@ -112,7 +115,7 @@ class Kalman(object):
         if u and y and dt:
             self.dt = dt
             self.u_k[0] = u[0]
-            self.u_k[1] = 0#u[1]
+            self.u_k[1] = u[1]
             self.y_k[0] = y[0]
             self.y_k[1] = y[1]
 
@@ -132,6 +135,7 @@ class Kalman(object):
             self.x_a[1].append(self.x_k_post[1])
             self.x_a[2].append(self.x_k_post[2])
             self.x_a[3].append(self.x_k_post[3])
+            self.x_a[4].append(self.x_k_post[4])
             self.u_a[0].append(u[0])
             self.u_a[1].append(u[1])
             self.y_a[0].append(y[0])
