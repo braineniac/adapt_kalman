@@ -23,17 +23,31 @@ if __name__ == '__main__':
     beta = 1
     Q_k = np.zeros((2,2))
     R_k = np.zeros((2,2))
+    Q_k[0][0] = 0.004
+    Q_k[1][1] = 0.002
+    R_k[0][0] = 0.04
+    R_k[1][1] = 0.02
+    M_k = np.zeros((2,2))
+    M_k[0][0] = 2
+    M_k[1][1] = 1
     x0 = [0,0,0,0,0]
-    kalman_fiter = KalmanFilter(Q_k,R_k,alpha,beta,x0)
 
-    array = [1,2,3,4,5,9,0,0,0,0,9]
-    same_array = [5,5,5,5,5,5]
+    uydt_array = (((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),)
+
     window_exp = MovingWeightedExpWindow(5)
     window_sig = MovingWeightedSigWindow(5)
-    window_exp.set_window(array)
-    print(window_exp.get_window())
-    avg = window_exp.get_avg()
-    print(avg)
-    window_sig.set_window(array)
-    print(window_sig.get_window())
-    print(window_sig.get_avg())
+
+    adaptive_kalman_filter = AdaptiveKalmanFilter(Q_k,R_k,alpha,beta,window_sig,M_k,x0)
+    kalman_filter = KalmanFilter(Q_k,R_k,alpha,beta,x0)
+
+    for uydt in uydt_array:
+        kalman_filter.filter_iter(uydt)
+        #print(kalman_filter.get_post_states())
+    for uydt in uydt_array:
+        adaptive_kalman_filter.filter_iter(uydt)
+        #print(adaptive_kalman_filter.get_post_states())

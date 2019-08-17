@@ -18,15 +18,18 @@ import pandas as pd
 class MovingWeightedWindow(object):
 
     def __init__(self,size=0):
-        if size:
+        if size is None:
+            raise AttributeError
+        else:
             self._size = size
             self._weights = []
             self._window = []
-        else:
-            raise AttributeError
 
     def get_avg(self):
         raise NotImplementedError
+
+    def get_size(self):
+        return self._size
 
     def _set_weights(self):
         raise NotImplementedError
@@ -55,11 +58,11 @@ class MovingWeightedSigWindow(MovingWeightedWindow):
 
     def __init__(self,size, alpha=10):
         super(MovingWeightedSigWindow, self).__init__(size)
-        if alpha:
+        if alpha is None:
+            raise AttributeError
+        else:
             self._alpha = alpha
             self._set_weights()
-        else:
-            raise AttributeError
 
     def get_avg(self):
         y = np.zeros(self._size)
