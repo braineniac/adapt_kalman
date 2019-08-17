@@ -17,7 +17,9 @@ import numpy as np
 class KalmanFilter(object):
 
     def __init__(self, Q_k=None, R_k=None, alpha=1.,beta=1.,x0 = [0,0,0,0,0]):
-        if np.count_nonzero(Q_k) >= 1 or np.count_nonzero(R_k) >= 1:
+        if np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1:
+            raise AttributeError
+        else:
             self._alpha = alpha
             self._beta = beta
 
@@ -32,7 +34,7 @@ class KalmanFilter(object):
             self._x_k_post = np.zeros((5,1))           # A posteriori state vector
             self._x_k_extr = np.zeros((5,1))           # extrapolated state vector
 
-            x0[3] = np.radians(xo[3])
+            x0[3] = np.radians(x0[3])
             self._x_k_pre = np.array(x0).reshape((5,1))
 
             self._P_k_pre = np.zeros((5,5))            # A priori covariance matrix
@@ -42,8 +44,8 @@ class KalmanFilter(object):
             self._phi_k = np.zeros((5,5))              # dynamics matrix
             self._gamma_k = np.zeros((5,2))            # control matrix
             self._G_k = np.zeros((5,2))                #
-            self._G_k[2][0] = self.alpha
-            self._G_k[4][1] = self.beta
+            self._G_k[2][0] = self._alpha
+            self._G_k[4][1] = self._beta
 
             self._C_k = np.zeros((2,5))                # measurement matrix
             self._D_k = np.zeros((2,2))                # measurement input matrix
@@ -51,8 +53,8 @@ class KalmanFilter(object):
 
             self._dt = 0
 
-
-    def filter_iter(self, u=None, y=None, dt=None):
+    def filter_iter(self, uydt = (None,None,None)):
+        u,y,dt = uydt
         if u and y and dt:
             self._dt = dt
             self._u_k[0] = u[0]
