@@ -26,7 +26,7 @@ if __name__ == '__main__':
     x0 = [0,0,0,0,0]
     kalman_fiter = KalmanFilter(Q_k,R_k,alpha,beta,x0)
 
-    array = [1,2,3,4,5,6,7,7,0,9,9]
+    array = [1,2,3,4,5,9,0,0,0,0,9]
     same_array = [5,5,5,5,5,5]
     window_exp = MovingWeightedExpWindow(5)
     window_sig = MovingWeightedSigWindow(5)

@@ -43,16 +43,12 @@ class MovingWeightedWindow(object):
 
 class MovingWeightedExpWindow(MovingWeightedWindow):
 
-    def __init__(self, size, alpha=5.0):
-        if alpha:
-            self._alpha = alpha
-        else:
-            raise AttributeError
+    def __init__(self, size):
         super(MovingWeightedExpWindow, self).__init__(size)
 
     def get_avg(self):
-        series = pd.Series(self._window)
-        ewm = series.ewm(span=self._alpha).mean().values
+        series = pd.Series(np.flip(self._window))
+        ewm = series.ewm(com=self._size/2).mean().values
         return ewm[-1]
 
 class MovingWeightedSigWindow(MovingWeightedWindow):
