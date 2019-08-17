@@ -17,7 +17,7 @@ import numpy as np
 class KalmanFilter(object):
 
     def __init__(self, Q_k=None, R_k=None, alpha=1.,beta=1.,x0 = [0,0,0,0,0]):
-        if Q_k or R_k:
+        if np.count_nonzero(Q_k) >= 1 or np.count_nonzero(R_k) >= 1:
             self._alpha = alpha
             self._beta = beta
 
@@ -50,6 +50,7 @@ class KalmanFilter(object):
             self._H_k = np.zeros((2,2))                #
 
             self._dt = 0
+
 
     def filter_iter(self, u=None, y=None, dt=None):
         if u and y and dt:
