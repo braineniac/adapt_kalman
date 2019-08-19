@@ -52,11 +52,16 @@ class KalmanFilter(object):
             self._H_k = np.zeros((2,2))                #
 
             self._dt = 0
+            self._t = 0
 
-    def filter_iter(self, uydt = (None,None,None)):
-        u,y,dt = uydt
-        if u and y and dt:
-            self._dt = dt
+    def filter_iter(self, tuy = (None,None,None)):
+        u,y,t = tuy
+        if t is None and u is None and y is None:
+            raise ValueError
+        else:
+            self._dt = t - self._t
+            self._t = t
+
             self._u_k[0] = u[0]
             self._u_k[1] = u[1]
             self._y_k[0] = y[0]
@@ -72,7 +77,7 @@ class KalmanFilter(object):
             self._setup_next_iter()
 
     def get_post_states(self):
-        return self._x_k_post
+        return tuple(self._x_k_post)
 
     def _update_matrices(self):
         if self._dt:

@@ -30,12 +30,11 @@ class AdaptiveKalmanFilter(KalmanFilter):
             self._Ro_k = self._Q_k.dot(np.linalg.inv(self._R_k))
             self._u_buffer = deque([],self._window.get_size())
 
-    def filter_iter(self, uydt=(None,None,None)):
-        u,y,dt = uydt
-        if u and y and dt:
-            self._u_buffer.append(u)
-            self._adapt_covar()
-            super(AdaptiveKalmanFilter,self).filter_iter(uydt)
+    def filter_iter(self, tuy=(None,None,None)):
+        t,u,y = tuy
+        self._u_buffer.append(u)
+        self._adapt_covar()
+        super(AdaptiveKalmanFilter,self).filter_iter(tuy)
 
     def _adapt_covar(self):
         if len(self._u_buffer) >= self._window.get_size():

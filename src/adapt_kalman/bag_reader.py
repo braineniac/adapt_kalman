@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import rosbag
+import numpy as np
 
 class BagReader(object):
     def __init__(self, bag_path=""):
@@ -33,7 +34,6 @@ class BagReader(object):
                 pos_x = odom_msg.message.pose.pose.position.x
                 pos_y = odom_msg.message.pose.pose.position.y
                 pos_z = odom_msg.message.pose.pose.position.z
-                pos = (pos_x,pos_y,pos_z)
 
                 orient_x = odom_msg.message.pose.pose.orientation.x
                 orient_y = odom_msg.message.pose.pose.orientation.y
@@ -41,14 +41,17 @@ class BagReader(object):
                 orient_w = odom_msg.message.pose.pose.orientation.w
                 q = [x,y,z,w]
                 roll,pitch,yaw = tf.transformations.euler_from_quaternion(q)
-                orient = (orient_x,orient_y,orient_z,roll,pitch,yaw)
 
-                vel_x = odom_msg.message.twist.twist.linear.x
-                vel_y = odom_msg.message.twist.twist.linear.y
-                vel_z = odom_msg.message.twist.twist.linear.z
-                vel = (vel_x,vel_y,vel_z)
+                lin_x = odom_msg.message.twist.twist.linear.x
+                lin_y = odom_msg.message.twist.twist.linear.y
+                lin_z = odom_msg.message.twist.twist.linear.z
 
-                odom.append((t,pos,orient,vel))
+                ang_x = odom_msg.message.twist.twist.angular.x
+                ang_y = odom_msg.message.twist.twist.angular.y
+                ang_z = odom_msg.message.twist.twist.angular.z
+
+                odom_data = (pos_x,pos_y,pos_z,roll,pitch,yaw,lin_x,lin_y,lin_z,ang_x,ang_y,ang_z)
+                odom.append((t,odom_data))
             return odom
 
     def read_imu(self, topic=None):
@@ -62,18 +65,16 @@ class BagReader(object):
                 accel_x = imu_msg.message.linear_acceleration.x
                 accel_y = imu_msg.message.linear_acceleration.y
                 accel_z = imu_msg.message.linear_acceleration.z
-                accel = (accel_x,accel_y,accel_z)
 
                 gyro_x = imu_msg.message.angular_velocity.x
                 gyro_y = imu_msg.message.angular_velocity.y
                 gyro_z = imu_msg.message.angular_velocity.z
-                gyro=(gyro_x,gyro_y,gyro_z)
 
-                imu.append((t,accel,gyro))
+                imu.append((t,(accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z)))
             return imu
 
     def read_twist(self,topic=None):
-        if topic is not None:
+        if topic is None:
             raise ValueError
         else:
             twist = []
@@ -84,11 +85,11 @@ class BagReader(object):
                 lin_x = twist_msg.message.twist.twist.linear.x
                 lin_y = twist_msg.message.twist.twist.linear.y
                 lin_z = twist_msg.message.twist.twist.linear.z
-                lin = (lin_x,lin_y,lin_z)
 
                 ang_x = twist_msg.message.twist.twist.angular.x
                 ang_y = twist_msg.message.twist.twist.angular.y
                 ang_z = twist_msg.message.twist.twist.angular.z
-                ang = (ang_x,ang_y,ang_z)
-                twist.append((t,lin,ang))
+
+                twist_data = np.array([lin_x,lin_y,lin_z,ang_x,ang_y,ang_z])
+                twist.append((t,twist_data))
             return twist

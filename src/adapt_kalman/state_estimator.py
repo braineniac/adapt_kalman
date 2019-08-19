@@ -16,16 +16,47 @@ import numpy as np
 
 from kalman_filter import KalmanFilter
 from adaptive_kalman_filter import AdaptiveKalmanFilter
+from bag_reader import BagReader
+
 
 class StateEstimator(object):
 
     def __init__(self):
-        self.plot_u = [[],[]]
-        self.plot_y = [[],[]]
-        self.plot_x = [[],[],[],[],[]]
-        self.plot_xy = []
-        self.plot_r = [[],[]]
-        self.r_a = [[],[]]
+        self.states = []
+        self.input = []
+        self.output = []
+        self.time = []
+
+    def get_states(self):
+        raise NotImplementedError
+
+
+class KalmanStateEstimator(StateEstimator):
+    def __init__(self, bag_path=None, kalman_filter=None):
+        if not isinstance(kalman_filter, KalmanFilter) or bag_path is None:
+            raise AttributeError
+        else:
+            super(KalmanStateEstimator, self).__init__()
+            self.bag_path = bag_path
+            self.kalman_filter = kalman_filter
+
+    def get_states(self):
+        if len(self.time) != len(self.input) or len(self.input) != len(self.output):
+            raise ValueError
+        elif len(self.states) == len(self.time):
+            return self.states
+        else:
+            for t, u, y in zip(self.time, self.input, self.output):
+                self.kalman_filter.filter_iter((t, u, y))
+                self.states.append((t, self.kalman_filter.get_post_states()))
+            return self.states
+
+    def set_input_bag_twist(self, topic=None):
+        if topic is None or mask is None:
+            raise ValueError
+        else:
+            bagreader = BagReader(self.bag_path)
+            t, bagreader.read_twist(topic)
 
     # def find_slice(self, start=0.0, finish=np.Inf):
     #     begin = 0
