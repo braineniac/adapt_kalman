@@ -60,7 +60,7 @@ class BagReader(object):
         else:
             imu = []
             imu_msgs = self.bag.read_messages(topics=topic)
-            for imu_msg in msgs:
+            for imu_msg in imu_msgs:
                 t = imu_msg.message.header.stamp.to_sec()
                 accel_x = imu_msg.message.linear_acceleration.x
                 accel_y = imu_msg.message.linear_acceleration.y

@@ -18,30 +18,33 @@ from bag_reader import BagReader
 
 class BagSystemFilter(object):
 
-    def __init__(self, bag_path=None):
+    def __init__(self):
         if bag_path is None:
             raise AttributeError
         else:
             self.bag_reader = BagReader(bag_path)
 
-    def get_input(self, topic=None, mask=None):
-        if topic is None or mask is None:
+    def get_input(self, topic=None):
+        if topic is None:
             raise ValueError
         else:
+            mask = [1,0,0,0,0,1]
             t,twist_data = zip(*self.bag_reader.read_twist(topic))
             return (t,self._filter(twist_data,mask))
 
-    def get_output(self, topic=None,mask=None):
-        if topic is None or mask is None:
+    def get_output(self, topic=None):
+        if topic is None:
             raise ValueError
         else:
+            mask = [1,0,0,0,0,1]
             t,imu_data = zip(*self.bag_reader.read_imu(topic))
             return (t,self._filter(imu_data,mask))
 
-    def get_states(self,topic=None,mask=None):
+    def get_states(self,topic=None):
         if topic is None or mask is None:
             raise ValueError
         else:
+            mask = [1,1,0,0,0,1,1,1,0,0,0,1]
             t,odom_data = zip(*self.bag_reader.read_odom(topic))
             return (t,self._filter(odom_data,mask))
 
