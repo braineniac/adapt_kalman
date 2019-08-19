@@ -15,6 +15,7 @@
 from kalman_filter import KalmanFilter
 from adaptive_kalman_filter import AdaptiveKalmanFilter
 from moving_weighted_window import MovingWeightedExpWindow,MovingWeightedSigWindow
+from bag_system_filter import BagSystemFilter
 
 import numpy as np
 
@@ -32,22 +33,28 @@ if __name__ == '__main__':
     M_k[1][1] = 1
     x0 = [0,0,0,0,0]
 
-    uydt_array = (((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
-    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
-    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
-    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
-    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
-    ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),)
+    # uydt_array = (((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    # ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    # ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    # ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    # ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),
+    # ((0,0),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,1),(0,1),0.1),((0,0),(0,1),0.1),)
+    #
+    # window_exp = MovingWeightedExpWindow(5)
+    # window_sig = MovingWeightedSigWindow(5)
+    #
+    # adaptive_kalman_filter = AdaptiveKalmanFilter(Q_k,R_k,alpha,beta,window_sig,M_k,x0)
+    # kalman_filter = KalmanFilter(Q_k,R_k,alpha,beta,x0)
+    #
+    # for uydt in uydt_array:
+    #     kalman_filter.filter_iter(uydt)
+    #     #print(kalman_filter.get_post_states())
+    # for uydt in uydt_array:
+    #     adaptive_kalman_filter.filter_iter(uydt)
+    #     #print(adaptive_kalman_filter.get_post_states())
 
-    window_exp = MovingWeightedExpWindow(5)
-    window_sig = MovingWeightedSigWindow(5)
-
-    adaptive_kalman_filter = AdaptiveKalmanFilter(Q_k,R_k,alpha,beta,window_sig,M_k,x0)
-    kalman_filter = KalmanFilter(Q_k,R_k,alpha,beta,x0)
-
-    for uydt in uydt_array:
-        kalman_filter.filter_iter(uydt)
-        #print(kalman_filter.get_post_states())
-    for uydt in uydt_array:
-        adaptive_kalman_filter.filter_iter(uydt)
-        #print(adaptive_kalman_filter.get_post_states())
+    rosbag = "/home/dan/ws/rosbag/garry3/5m_slow.bag"
+    bag_system_filter = BagSystemFilter(rosbag)
+    mask = [1,0,0,0,0,1]
+    t,sys_in = bag_system_filter.get_system_input("/fake_encoder/twist",mask)
+    print(sys_in)
