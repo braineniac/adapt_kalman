@@ -16,91 +16,106 @@ import numpy as np
 
 from kalman_filter import KalmanFilter
 from adaptive_kalman_filter import AdaptiveKalmanFilter
-from bag_reader import BagReader
-
+from bag_system_filter import BagSystemFilter
 
 class StateEstimator(object):
 
     def __init__(self):
-        self.states = []
-        self.input = []
-        self.output = []
-        self.time = []
+        self._states = []
+        self._input = []
+        self._output = []
+        self._time = []
 
     def get_states(self):
-        raise NotImplementedError
+        return self._states
 
+    def get_input(self):
+        return self._input
+
+    def get_output(self):
+        return self._output
+
+    def set_states(self, states=None):
+        if states is None:
+            raise ValueError
+        else:
+            t,states = states
+            states = self.v_state_correction(states)
+            self._states = states
+            self._time = t_states
+
+    def set_input(self, input=None):
+        if input is None:
+            raise ValueError
+        else:
+            self._input = input
+
+    def set_output(self, output=None):
+        if output is None:
+            raise ValueError
+        else:
+            self._output = output
+
+    def _v_state_correction(self, states = None):
+        if states is None:
+            raise ValueError
+        else:
+            new_states = []
+            for x,y,psi,xdot,ydot,psidot in zip(states):
+                v = np.sqrt(xdot*xdot + ydot*ydot)
+                new_states.append((x,y,v,psi,psidot))
+            return states
 
 class KalmanStateEstimator(StateEstimator):
-    def __init__(self, bag_path=None, kalman_filter=None):
-        if not isinstance(kalman_filter, KalmanFilter) or bag_path is None:
+
+    def __init__(self,kalman_filter=None):
+        if not isinstance(kalman_filter, KalmanFilter):
             raise AttributeError
         else:
             super(KalmanStateEstimator, self).__init__()
-            self.bag_path = bag_path
-            self.kalman_filter = kalman_filter
+            self._kalman_filter = kalman_filter
 
     def get_states(self):
-        if len(self.time) != len(self.input) or len(self.input) != len(self.output):
+        if len(self._time) != len(self._input) or len(self._input) != len(self._output):
             raise ValueError
-        elif len(self.states) == len(self.time):
-            return self.states
+        elif len(self._states) == len(self._time):
+            return self._states
         else:
-            for t, u, y in zip(self.time, self.input, self.output):
-                self.kalman_filter.filter_iter((t, u, y))
-                self.states.append((t, self.kalman_filter.get_post_states()))
-            return self.states
+            self._add_time_from_input()
+            self._add_time_from_output()
+            self._run_kalman()
+            return self._states
 
-    def set_input_bag_twist(self, topic=None):
-        if topic is None or mask is None:
+    def _run_kalman(self):
+        if len(self._input) <= 1 or len(self._output) <= 1:
             raise ValueError
         else:
-            bagreader = BagReader(self.bag_path)
-            t, bagreader.read_twist(topic)
+            u_index = 0
+            y_index = 0
+            u = (0,0)
+            y = (0,0)
+            for t in sort(self._time):
+                last_u_t,last_u = self._get_u(u_index)
+                last_y_t,last_y = self._get_y(y_index)
+                if t == last_u_t:
+                    u = last_u
+                    u_index += 1
+                elif t == last_y_t:
+                    y = last_y
+                    y_index += 1
+                self._kalman_filter.filter_iter((t, u, y))
+                self._states.append((t, self._kalman_filter.get_post_states()))
 
-    # def find_slice(self, start=0.0, finish=np.Inf):
-    #     begin = 0
-    #     end = -1
-    #     for elem in self.t_a:
-    #         if elem <= finish:
-    #             end = end + 1
-    #         if elem <= start:
-    #             begin = begin + 1
-    #     end = len(self.t_a) - end
-    #     return begin,end
+    def _get_y(self, index=0):
+        return self._output[index][0],self._output[index][1]
 
-    # def set_zero_time(self, begin):
-    #     new_t_array = []
-    #     for elem in self.t_a:
-    #         new_t_array.append(elem - self.t_a[begin])
-    #     self.t_a = new_t_array
-    #
-    # def psi_fix(self):
-    #     psi_a = []
-    #     for psi in self.x_a[3]:
-    #         k = abs(int(psi / (2*np.pi)))
-    #         if psi > 2*np.pi:
-    #             psi -= 2*np.pi*k
-    #         elif psi < -2*np.pi*k:
-    #             psi += 2*np.pi*(k+1)
-    #         psi_a.append(psi*180/np.pi)
-    #     self.x_a[3] = psi_a
+    def _get_u(self,index=0):
+        return self._input[index][0],self._input[index][1]
 
-    # def add_plots(self, start=0, finish=np.inf):
-    #     begin,end = self.find_slice(start,finish)
-    #     #self.set_zero_time(begin)
-    #     #print(begin,end)
-    #     self.psi_fix()
-    #
-    #     self.plot_x[0] = (self.t_a[begin:-end],self.x_a[0][begin:-end])
-    #     self.plot_x[1] = (self.t_a[begin:-end], self.x_a[1][begin:-end])
-    #     self.plot_x[2] = (self.t_a[begin:-end], self.x_a[2][begin:-end])
-    #     self.plot_x[3] = (self.t_a[begin:-end], self.x_a[3][begin:-end])
-    #     self.plot_x[4] = (self.t_a[begin:-end],self.x_a[4][begin:-end])
-    #     self.plot_xy = (self.x_a[0][begin:-end],self.x_a[1][begin:-end])
-    #     self.plot_u[0] = (self.t_a[begin:-end],[self.alpha*x for x in self.u_a[0][begin:-end]])
-    #     self.plot_u[1] = (self.t_a[begin:-end],[self.beta*x for x in self.u_a[1][begin:-end]])
-    #     self.plot_y[0] = (self.t_a[begin:-end],self.y_a[0][begin:-end])
-    #     self.plot_y[1] = (self.t_a[begin:-end],self.y_a[1][begin:-end])
-    #     self.plot_r[0] = (self.t_a[begin:-end],self.r_a[0][begin:-end])
-    #     self.plot_r[1] = (self.t_a[begin:-end],self.r_a[1][begin:-end])
+    def _add_time_from_output(self):
+        for t_y,_y in self._output:
+            self._time.append(t_y)
+
+    def _add_time_from_input(self):
+        for t_u,_u in self._input:
+            self._time.append(t_u)

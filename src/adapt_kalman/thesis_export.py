@@ -56,5 +56,7 @@ if __name__ == '__main__':
     rosbag = "/home/dan/ws/rosbag/garry3/5m_slow.bag"
     bag_system_filter = BagSystemFilter(rosbag)
     mask = [1,0,0,0,0,1]
-    t,sys_in = bag_system_filter.get_system_input("/fake_encoder/twist",mask)
-    print(sys_in)
+    mask1 = [0,0,0,0,0,0,1,0,0,0,0,1]
+    t_in,sys_in = bag_system_filter.get_input("/fake_encoder/twist",mask)
+    t_out,sys_out = bag_system_filter.get_output("/imu",mask1)
+    print(len(t_in),len(t_out))
