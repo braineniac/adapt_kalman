@@ -16,11 +16,12 @@ import numpy as np
 from collections import deque
 
 from kalman_filter import KalmanFilter
+from moving_weighted_window import MovingWeightedWindow
 
 class AdaptiveKalmanFilter(KalmanFilter):
 
     def __init__(self,Q_k=None,R_k=None,alpha=1.0,beta=1.0, window=None, M_k=None,x0=[0,0,0,0,0]):
-        if window is None or np.count_nonzero(M_k)<2:
+        if not isinstance(window,MovingWeightedWindow) or np.count_nonzero(M_k)<2:
             raise AttributeError
         else:
             super(AdaptiveKalmanFilter,self).__init__(alpha=alpha,beta=beta,Q_k=Q_k,R_k=R_k,x0=x0)
