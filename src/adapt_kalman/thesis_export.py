@@ -60,3 +60,5 @@ if __name__ == '__main__':
     t_in,sys_in = bag_system_filter.get_input("/fake_encoder/twist",mask)
     t_out,sys_out = bag_system_filter.get_output("/imu",mask1)
     print(len(t_in),len(t_out))
+
+    # np.savetxt("{}/ekf_{}_x0.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[0][0],ekf_reader.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
