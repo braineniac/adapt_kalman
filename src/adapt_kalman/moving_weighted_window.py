@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2019 Daniel Hammer. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +17,10 @@
 import numpy as np
 import pandas as pd
 
+
 class MovingWeightedWindow(object):
 
-    def __init__(self,size=0):
+    def __init__(self, size=0):
         if size is None:
             raise AttributeError
         else:
@@ -31,18 +34,18 @@ class MovingWeightedWindow(object):
     def get_size(self):
         return self._size
 
-    def _set_weights(self):
-        raise NotImplementedError
-
-    def set_window(self,array=None):
-        if array:
+    def set_window(self, array=None):
+        if array is None:
+            raise ValueError
+        else:
             window = []
             for i in range(self._size):
-                window.append(array[-i-1])
-        self._window = window
+                window.append(array[-i - 1])
+            self._window = window
 
     def get_window(self):
         return self._window
+
 
 class MovingWeightedExpWindow(MovingWeightedWindow):
 
@@ -51,12 +54,13 @@ class MovingWeightedExpWindow(MovingWeightedWindow):
 
     def get_avg(self):
         series = pd.Series(np.flip(self._window))
-        ewm = series.ewm(com=self._size/2).mean().values
+        ewm = series.ewm(com=self._size / 2).mean().values
         return ewm[-1]
+
 
 class MovingWeightedSigWindow(MovingWeightedWindow):
 
-    def __init__(self,size, alpha=10):
+    def __init__(self, size, alpha=10):
         super(MovingWeightedSigWindow, self).__init__(size)
         if alpha is None:
             raise AttributeError
@@ -68,14 +72,14 @@ class MovingWeightedSigWindow(MovingWeightedWindow):
         y = np.zeros(self._size)
         for i in range(self._size):
             upper_sum = 0
-            for k in range(i+1):
+            for k in range(i + 1):
                 upper_sum += self._window[k] * self._weights[k]
-            y[i] = upper_sum / np.sum(self._weights[:i+1])
+            y[i] = upper_sum / np.sum(self._weights[:i + 1])
         return y[-1]
 
     def _set_weights(self):
-        x = np.linspace(0,1,self._size)
+        x = np.linspace(0, 1, self._size)
         w = np.zeros(self._size)
         for i in range(self._size):
-            w[i] = 1 / (1 + np.exp(self._alpha * (x[i]-0.5)))
+            w[i] = 1 / (1 + np.exp(self._alpha * (x[i] - 0.5)))
         self._weights = w

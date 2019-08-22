@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2019 Daniel Hammer. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,7 @@
 from sh import test, mkdir
 from sh import ErrorReturnCode_1
 
+
 def file_exists(file_name=None):
     try:
         test("-e", file_name)
@@ -23,6 +26,7 @@ def file_exists(file_name=None):
         print("File {} doesn't exist!".format(file_name))
         return False
 
+
 def folder_exists(folder_name=None):
     try:
         test("-d", folder_name)
@@ -30,6 +34,7 @@ def folder_exists(folder_name=None):
     except ErrorReturnCode_1:
         print("Folder {} doesn't exist!".format(folder_name))
         return create_folder(folder_name)
+
 
 def create_folder(folder=None):
     try:

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2019 Daniel Hammer. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,40 +22,39 @@ from moving_weighted_window import MovingWeightedWindow
 
 class KalmanFilter(object):
 
-    def __init__(self, Q_k=None, R_k=None, alpha=1., beta=1., x0=[0, 0, 0, 0, 0]):
+    def __init__(self, Q_k=None, R_k=None, alpha=1., beta=1., x0=(0, 0, 0, 0, 0)):
         if np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1:
             raise AttributeError
         else:
             self._alpha = alpha
             self._beta = beta
 
-            self._R_k = R_k  # observation noise covaraiance matrix
-            self._Q_k = Q_k  # process noise covariance matrix
+            self._R_k = R_k                           # Observation Covariance Matrix
+            self._Q_k = Q_k                           # Process Covariance Matrix
 
-            self._u_k = np.zeros((2, 1))  # control input vector
-            self._y_k = np.zeros((2, 1))  # observation vector
-            self._L_k = np.zeros((5, 2))  # Kalman gain matrix
-
-            self._X_k_pre = np.zeros((5, 1))  # A priori state vector
-            self._X_k_post = np.zeros((5, 1))  # A posteriori state vector
-            self._X_k_extr = np.zeros((5, 1))  # extrapolated state vector
+            self._u_k = np.zeros((2, 1))              # Input Vector
+            self._y_k = np.zeros((2, 1))              # Measurement Vector
+            self._L_k = np.zeros((5, 2))              # Kalman Gain Matrix
 
             x0[3] = np.radians(x0[3])
-            self._X_k_pre = np.array(x0).reshape((5, 1))
+            x0 = np.array(x0).reshape((5, 1))         # Initial State Vector
+            self._X_k_pre = x0                        # A Priori state vector
+            self._X_k_post = np.zeros((5, 1))         # A Posteriori state vector
+            self._X_k_extr = np.zeros((5, 1))         # Extrapolated state vector
 
-            self._P_k_pre = np.zeros((5, 5))  # A priori covariance matrix
-            self._P_k_post = np.zeros((5, 5))  # A posteriori covariance matrix
-            self._P_k_extr = np.zeros((5, 5))  # extrapolated covariance matrix
+            self._P_k_pre = np.zeros((5, 5))          # A Priori Parameter Covariance Matrix
+            self._P_k_post = np.zeros((5, 5))         # A Posteriori Parameter Covariance Matrix
+            self._P_k_extr = np.zeros((5, 5))         # Extrapolated Parameter Covariance Matrix
 
-            self._Phi_k = np.zeros((5, 5))  # dynamics matrix
-            self._Gamma_k = np.zeros((5, 2))  # control matrix
-            self._G_k = np.zeros((5, 2))  #
+            self._Phi_k = np.zeros((5, 5))            # Dynamic Coefficient Matrix
+            self._Gamma_k = np.zeros((5, 2))          # Input Coupling Matrix
+            self._G_k = np.zeros((5, 2))              # Process Noise Input Coupling Matrix
             self._G_k[2][0] = self._alpha
             self._G_k[4][1] = self._beta
 
-            self._C_k = np.zeros((2, 5))  # measurement matrix
-            self._D_k = np.zeros((2, 2))  # measurement input matrix
-            self._H_k = np.zeros((2, 2))  #
+            self._C_k = np.zeros((2, 5))              # Measurement Sensitivity Matrix
+            self._D_k = np.zeros((2, 2))              # Output Coupling Matrix
+            self._H_k = np.zeros((2, 2))              # Process Noise Output Coupling Matrix
 
             self._dt = 0
             self._t = 0
@@ -84,7 +85,7 @@ class KalmanFilter(object):
         return tuple(self._X_k_post)
 
     def get_Q(self):
-        return (self._Q_k)
+        return tuple(self._Q_k)
 
     def _update_matrices(self):
         if self._dt:
@@ -135,7 +136,7 @@ class KalmanFilter(object):
 
 class AdaptiveKalmanFilter(KalmanFilter):
 
-    def __init__(self, Q_k=None, R_k=None, alpha=1.0, beta=1.0, window=None, M_k=None, x0=[0, 0, 0, 0, 0]):
+    def __init__(self, Q_k=None, R_k=None, alpha=1.0, beta=1.0, window=None, M_k=None, x0=(0, 0, 0, 0, 0)):
         if not isinstance(window, MovingWeightedWindow) or np.count_nonzero(M_k) < 2:
             raise AttributeError
         else:
@@ -149,10 +150,10 @@ class AdaptiveKalmanFilter(KalmanFilter):
     def filter_iter(self, tuy=(None, None, None)):
         t, u, y = tuy
         self._u_buffer.append(u)
-        self._adapt_covar()
+        self._adapt_covariance()
         super(AdaptiveKalmanFilter, self).filter_iter(tuy)
 
-    def _adapt_covar(self):
+    def _adapt_covariance(self):
         if len(self._u_buffer) >= self._window.get_size():
             w_k = self._get_windowed_input()
             self._Lambda_k = np.identity(2)
