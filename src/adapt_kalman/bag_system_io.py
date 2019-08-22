@@ -16,7 +16,7 @@ import numpy as np
 from itertools import compress
 from bag_reader import BagReader
 
-class BagSystemFilter(object):
+class BagSystemIO(object):
 
     def __init__(self):
         if bag_path is None:

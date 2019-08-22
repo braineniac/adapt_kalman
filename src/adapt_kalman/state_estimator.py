@@ -209,5 +209,3 @@ class StatePlotHandler(object):
             for t in t_array:
                 new_t_array.append(t - t_array[start_index])
             return new_t_array
-
-            # np.savetxt("{}/ekf_{}_x0.csv".format(self.plot_folder, bagname), np.transpose([ekf_reader.plot_x[0][0],ekf_reader.plot_x[0][1]]),header='t x0', comments='# ',delimiter=' ', newline='\n')
