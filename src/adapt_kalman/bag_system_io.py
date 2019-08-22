@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2019 Daniel Hammer. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,41 +19,40 @@ from itertools import compress
 
 from bag_reader import BagReader
 
+
 class BagSystemIO(object):
 
     def __init__(self):
-        pass
+        self._input_mask = [1, 0, 0, 0, 0, 1]
+        self._output_mask = [1, 0, 0, 0, 0, 1]
+        self._state_mask = [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1]
 
-    def get_input(self, bagreader=None):
-        if topic is not isinstance(bagreader, BagReader):
+    def get_input(self, stamped_input=None):
+        if stamped_input is None:
             raise ValueError
         else:
-            mask = [1,0,0,0,0,1]
-            t,twist_data = zip(*self.bag_reader.read_twist(topic))
-            return (t,self._filter(twist_data,mask))
+            return self._filter(stamped_input, self._input_mask)
 
-    def get_output(self, bagreader=None):
-        if topic is not isinstance(bagreader, BagReader):
+    def get_output(self, stamped_output=None):
+        if stamped_output is None:
             raise ValueError
         else:
-            mask = [1,0,0,0,0,1]
-            t,imu_data = zip(*self.bag_reader.read_imu(topic))
-            return (t,self._filter(imu_data,mask))
+            return self._filter(stamped_output, self._output_mask)
 
-    def get_states(self,bagreader=None):
-        if topic is not isinstance(bagreader, BagReader):
+    def get_states(self, stamped_states=None):
+        if stamped_states is None:
             raise ValueError
         else:
-            mask = [1,1,0,0,0,1,1,1,0,0,0,1]
-            t,odom_data = zip(*self.bag_reader.read_odom(topic))
-            return (t,self._filter(odom_data,mask))
+            return self._filter(stamped_states, self._state_mask)
 
-    def _filter(self, points=None, mask=None):
-        if points is None or mask is None:
+    @staticmethod
+    def _filter(stamped_points=None, mask=None):
+        if stamped_points is None or mask is None:
             raise ValueError
         else:
-            mask = np.array(mask,dtype=bool)
-            fil_points = []
+            t, points = stamped_points
+            mask = np.array(mask, dtype=bool)
+            filtered_points = []
             for point in points:
-                fil_points.append(tuple(compress(point,mask)))
-            return fil_points
+                filtered_points.append(tuple(compress(point, mask)))
+            return tuple(t, filtered_points)

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2019 Daniel Hammer. All Rights Reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +17,7 @@
 import tf
 import rosbag
 import numpy as np
+
 
 class BagReader(object):
     def __init__(self, bag_path=""):
@@ -40,8 +43,8 @@ class BagReader(object):
                 orient_y = odom_msg.message.pose.pose.orientation.y
                 orient_z = odom_msg.message.pose.pose.orientation.z
                 orient_w = odom_msg.message.pose.pose.orientation.w
-                q = [x,y,z,w]
-                roll,pitch,yaw = tf.transformations.euler_from_quaternion(q)
+                q = [orient_x, orient_y, orient_z, orient_w]
+                roll, pitch, yaw = tf.transformations.euler_from_quaternion(q)
 
                 lin_x = odom_msg.message.twist.twist.linear.x
                 lin_y = odom_msg.message.twist.twist.linear.y
@@ -51,8 +54,8 @@ class BagReader(object):
                 ang_y = odom_msg.message.twist.twist.angular.y
                 ang_z = odom_msg.message.twist.twist.angular.z
 
-                odom_data = (pos_x,pos_y,pos_z,roll,pitch,yaw,lin_x,lin_y,lin_z,ang_x,ang_y,ang_z)
-                odom.append((t,odom_data))
+                odom_data = (pos_x, pos_y, pos_z, roll, pitch, yaw, lin_x, lin_y, lin_z, ang_x, ang_y, ang_z)
+                odom.append((t, odom_data))
             return odom
 
     def read_imu(self, topic=None):
@@ -71,10 +74,10 @@ class BagReader(object):
                 gyro_y = imu_msg.message.angular_velocity.y
                 gyro_z = imu_msg.message.angular_velocity.z
 
-                imu.append((t,(accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z)))
+                imu.append((t, (accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z)))
             return imu
 
-    def read_twist(self,topic=None):
+    def read_twist(self, topic=None):
         if topic is None:
             raise ValueError
         else:
@@ -91,6 +94,6 @@ class BagReader(object):
                 ang_y = twist_msg.message.twist.twist.angular.y
                 ang_z = twist_msg.message.twist.twist.angular.z
 
-                twist_data = np.array([lin_x,lin_y,lin_z,ang_x,ang_y,ang_z])
-                twist.append((t,twist_data))
+                twist_data = np.array([lin_x, lin_y, lin_z, ang_x, ang_y, ang_z])
+                twist.append((t, twist_data))
             return twist
