@@ -21,19 +21,23 @@ from bag_system_filter import BagSystemFilter
 class StateEstimator(object):
 
     def __init__(self):
-        self._states = []
-        self._input = []
-        self._output = []
+        self._stamped_states = []
+        self._stamped_input = []
+        self._stamped_output = []
+        self._stamped_Q = []
         self._time = []
 
     def get_stamped_states(self):
-        return self._states
+        return self._stamped_states
 
     def get_stamped_input(self):
-        return self._input
+        return self._stamped_input
 
     def get_stamped_output(self):
-        return self._output
+        return self._stamped_output
+
+    def get_stamped_Q(self):
+        return self._stamped_Q
 
     def set_states(self, stamped_states=None):
         if stamped_states is None:
@@ -42,20 +46,19 @@ class StateEstimator(object):
             stamps,states = stamped_states
             states = self._v_state_form(states)
             states = self._psi_state_limit(states)
-            self._states = states
-            self._time = stamps
+            self._stamped_states = (stamps, states)
 
-    def set_stamped_input(self, input=None):
-        if input is None:
+    def set_stamped_input(self, stamped_input=None):
+        if stamped_input is None:
             raise ValueError
         else:
-            self._input = input
+            self._stamped_input = stamped_input
 
-    def set_stamped_output(self, output=None):
-        if output is None:
+    def set_stamped_output(self, stamped_output=None):
+        if stamped_output is None:
             raise ValueError
         else:
-            self._output = output
+            self._stamped_output = stamped_output
 
     def _v_state_form(self, states = None):
         if states is None:
@@ -91,18 +94,18 @@ class KalmanStateEstimator(StateEstimator):
             self._kalman_filter = kalman_filter
 
     def get_stamped_states(self):
-        if len(self._time) != len(self._input) or len(self._input) != len(self._output):
+        if len(self._time) != len(self._stamped_input) or len(self._stamped_input) != len(self._stamped_output):
             raise ValueError
-        elif len(self._states) == len(self._time):
-            return self._states
+        elif len(self._stamped_states) == len(self._time):
+            return self._stamped_states
         else:
             self._add_time_from_input()
             self._add_time_from_output()
             self._run_kalman()
-            return self._states
+            return self._stamped_states
 
     def _run_kalman(self):
-        if len(self._input) <= 1 or len(self._output) <= 1:
+        if len(self._stamped_input) <= 1 or len(self._stamped_output) <= 1:
             raise ValueError
         else:
             u_index = 0
@@ -112,9 +115,10 @@ class KalmanStateEstimator(StateEstimator):
             stamped_state = []
             stamp = []
             states = []
+            Q = []
             for t in sort(self._time):
-                last_u_t,last_u = self._get_u(u_index)
-                last_y_t,last_y = self._get_y(y_index)
+                last_u_t,last_u = self._stamped_input[index]
+                last_y_t,last_y = self._stamped_output[index]
                 if t == last_u_t:
                     u = last_u
                     u_index += 1
@@ -123,22 +127,18 @@ class KalmanStateEstimator(StateEstimator):
                     y_index += 1
                 self._kalman_filter.filter_iter((t, u, y))
                 states.append(self._kalman_filter.get_post_states())
+                Q.append(self._kalman_filter.get_Q())
                 stamp.append(t)
             states = self._psi_state_limit(states)
-            return (stamp,states)
-
-    def _get_y(self, index=0):
-        return self._output[index][0],self._output[index][1]
-
-    def _get_u(self,index=0):
-        return self._input[index][0],self._input[index][1]
+            self._stamped_states = (stamp,states)
+            self._stamped_Q = (stamp,Q)
 
     def _add_time_from_output(self):
-        for t_y,_y in self._output:
+        for t_y,_y in self._stamped_output:
             self._time.append(t_y)
 
     def _add_time_from_input(self):
-        for t_u,_u in self._input:
+        for t_u,_u in self._stamped_input:
             self._time.append(t_u)
 
 class StatePlotHandler(object):
@@ -168,6 +168,35 @@ class StatePlotHandler(object):
     def get_output(self):
         stamped_output = self._state_estimator.get_stamped_output()
         return self._slice_data(stamped_output)
+
+    def get_Q(self):
+        stamped_Q = self._state_estimator.get_stamped_Q()
+        return self._slice_data(stamped_Q)
+
+    def export_output(self, pre="", post=""):
+        t,y = self.get_output()
+        y0,y1 = y
+        np.savetxt("../../data/{}_y0_{}.csv".format(pre,post), np.transpose([t,y0]),header='t y0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_y1_{}.csv".format(pre,post), np.transpose([t,y1]),header='t y1', comments='# ',delimiter=' ', newline='\n')
+
+    def export_input(self, pre="", post=""):
+        t,u = self.get_input()
+        u0,u1 = u
+        np.savetxt("../../data/{}_u0_{}.csv".format(pre,post), np.transpose([t,u0]),header='t u0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_u1_{}.csv".format(pre,post), np.transpose([t,u1]),header='t u1', comments='# ',delimiter=' ', newline='\n')
+
+    def export_states(self, pre="",post=""):
+        t,x = self.get_states()
+        x0,x1,x2,x3,x4 = x
+        np.savetxt("../../data/{}_x0_{}.csv".format(pre,post), np.transpose([t,x0]),header='t x0', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_x1_{}.csv".format(pre,post), np.transpose([t,x1]),header='t x1', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_x2_{}.csv".format(pre,post), np.transpose([t,x2]),header='t x2', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_x3_{}.csv".format(pre,post), np.transpose([t,x3]),header='t x3', comments='# ',delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}_x4_{}.csv".format(pre,post), np.transpose([t,x4]),header='t x4', comments='# ',delimiter=' ', newline='\n')
+
+    def export_Q(self):
+        t,Q = self.get_stamped_Q()
+        np.savetxt("../../data/{}_Q_{}.csv".format(pre,post), np.transpose([t,Q]),header='t Q', comments='# ',delimiter=' ', newline='\n')
 
     def filter_butter(self, array, order=5, fc=1/50.):
         fs = 50

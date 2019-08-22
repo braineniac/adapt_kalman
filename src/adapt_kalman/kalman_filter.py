@@ -82,6 +82,9 @@ class KalmanFilter(object):
     def get_post_states(self):
         return tuple(self._x_k_post)
 
+    def get_Q(self):
+        return (self._Q_k)
+
     def _update_matrices(self):
         if self._dt:
             self._phi_k = np.array([
