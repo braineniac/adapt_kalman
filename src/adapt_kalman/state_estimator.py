@@ -194,7 +194,7 @@ class StatePlotHandler(object):
         np.savetxt("../../data/{}_x3_{}.csv".format(pre,post), np.transpose([t,x3]),header='t x3', comments='# ',delimiter=' ', newline='\n')
         np.savetxt("../../data/{}_x4_{}.csv".format(pre,post), np.transpose([t,x4]),header='t x4', comments='# ',delimiter=' ', newline='\n')
 
-    def export_Q(self):
+    def export_Q(self,pre="",post=""):
         t,Q = self.get_stamped_Q()
         np.savetxt("../../data/{}_Q_{}.csv".format(pre,post), np.transpose([t,Q]),header='t Q', comments='# ',delimiter=' ', newline='\n')
 
