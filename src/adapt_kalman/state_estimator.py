@@ -18,7 +18,6 @@ import numpy as np
 from scipy import signal
 
 from kalman_filter import KalmanFilter, AdaptiveKalmanFilter
-from bag_system_filter import BagSystemFilter
 
 
 class StateEstimator(object):
@@ -46,10 +45,12 @@ class StateEstimator(object):
         if stamped_states is None:
             raise ValueError
         else:
-            stamps, states = stamped_states
-            states = self._v_state_form(states)
-            states = self._psi_state_limit(states)
-            self._stamped_states = (stamps, states)
+            new_stamped_states = []
+            for stamp, states in stamped_states:
+                states = self._v_state_form(states)
+                states = self._psi_state_limit(states)
+                new_stamped_states.append((stamp, states))
+            self._stamped_states = new_stamped_states
 
     def set_stamped_input(self, stamped_input=None):
         if stamped_input is None:
@@ -118,12 +119,11 @@ class KalmanStateEstimator(StateEstimator):
             y_index = 0
             u = (0, 0)
             y = (0, 0)
-            stamp = []
-            states = []
-            Q = []
+            stamped_states = []
+            stamped_Q = []
             for t in np.sort(self._time):
-                last_u_t, last_u = self._stamped_input[u_index]
-                last_y_t, last_y = self._stamped_output[y_index]
+                last_u_t, last_u = zip(self._stamped_input[u_index])
+                last_y_t, last_y = zip(self._stamped_output[y_index])
                 if t == last_u_t:
                     u = last_u
                     u_index += 1
@@ -131,12 +131,12 @@ class KalmanStateEstimator(StateEstimator):
                     y = last_y
                     y_index += 1
                 self._kalman_filter.filter_iter((t, u, y))
-                states.append(self._kalman_filter.get_post_states())
-                Q.append(self._kalman_filter.get_Q())
-                stamp.append(t)
-            states = self._psi_state_limit(states)
-            self._stamped_states = (stamp, states)
-            self._stamped_Q = (stamp, Q)
+                states = self._kalman_filter.get_post_states()
+                states = self._psi_state_limit(states)
+                stamped_states.append((t, states))
+                stamped_Q.append((t, self._kalman_filter.get_Q()))
+            self._stamped_states = stamped_states
+            self._stamped_Q = stamped_Q
 
     def _add_time_from_output(self):
         for t_y, _y in self._stamped_output:
@@ -226,12 +226,17 @@ class StatePlotHandler(object):
         if stamped_data is None:
             raise ValueError
         else:
-            t, data = zip(stamped_data)
-            start, end = self._find_slice(t)
-            for points in data:
-                points = points[start:end]
-            t = self._set_zero_time(start, t)
-            return tuple(t, data)
+            t_list = []
+            data_list = []
+            for t,data in zip(stamped_data):
+                t_list.append(t)
+                data_list.append(data)
+            start, end = self._find_slice(t_list)
+            new_points = []
+            t_list = self._set_zero_time(start, t_list)
+            for t, data in zip(t_list[start:end], data_list[start:end]):
+                new_points.append((t,data))
+            return new_points
 
     def _find_slice(self, t_array=None):
         if t_array is None:

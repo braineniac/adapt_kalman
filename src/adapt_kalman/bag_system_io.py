@@ -17,8 +17,6 @@
 import numpy as np
 from itertools import compress
 
-from bag_reader import BagReader
-
 
 class BagSystemIO(object):
 
@@ -50,9 +48,9 @@ class BagSystemIO(object):
         if stamped_points is None or mask is None:
             raise ValueError
         else:
-            t, points = stamped_points
+            time, points = zip(*stamped_points)
             mask = np.array(mask, dtype=bool)
-            filtered_points = []
-            for point in points:
-                filtered_points.append(tuple(compress(point, mask)))
-            return tuple(t, filtered_points)
+            filtered_stamped_points = []
+            for t, point in zip(time, points):
+                filtered_stamped_points.append((t, tuple(compress(point, mask))))
+            return filtered_stamped_points
