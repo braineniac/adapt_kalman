@@ -34,10 +34,16 @@ class SystemIOSimulator(object):
         self._set_output()
 
     def get_stamped_input(self):
-        return tuple(self._time, self._input)
+        input_list = []
+        for t, u0, u1 in zip(self._time, *self._input):
+            input_list.append((t, (u0, u1)))
+        return input_list
 
     def get_stamped_output(self):
-        return tuple(self._time, self._output)
+        output_list = []
+        for t, y0, y1 in zip(self._time, *self._output):
+            output_list.append((t, (y0, y1)))
+        return output_list
 
     def _set_input(self):
         raise NotImplementedError
@@ -119,17 +125,15 @@ class OctagonSimulator(SystemIOSimulator):
         self._output = (y0, y1)
 
     def _get_y0(self):
-        accel = np.linspace(0, self._time, self._N)
         u0 = self._input[0]
         gauss = get_gauss(0.1)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 20 * np.gradient(conv)
         noise_still = np.random.normal(0, 0.08, self._N)
-        noise_moving = get_moving_noise(accel, 3, 0.1)
+        noise_moving = get_moving_noise(conv, 3, 0.1)
         return grad + noise_still + noise_moving
 
     def _get_y1(self):
-        dpsi = np.linspace(0, self._time, self._N)
         gauss = get_gauss(0.1, 3 / 7.)
         u1 = self._input[1]
         conv = np.convolve(u1, gauss, mode="same")
