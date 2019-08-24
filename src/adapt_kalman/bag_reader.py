@@ -74,7 +74,8 @@ class BagReader(object):
                 gyro_y = imu_msg.message.angular_velocity.y
                 gyro_z = imu_msg.message.angular_velocity.z
 
-                imu.append((t, (accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z)))
+                imu_data = (accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z)
+                imu.append((t, imu_data))
             return imu
 
     def read_twist(self, topic=None):
@@ -94,6 +95,6 @@ class BagReader(object):
                 ang_y = twist_msg.message.twist.twist.angular.y
                 ang_z = twist_msg.message.twist.twist.angular.z
 
-                twist_data = np.array([lin_x, lin_y, lin_z, ang_x, ang_y, ang_z])
+                twist_data = (lin_x, lin_y, lin_z, ang_x, ang_y, ang_z)
                 twist.append((t, twist_data))
             return twist

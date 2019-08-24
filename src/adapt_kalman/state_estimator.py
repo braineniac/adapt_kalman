@@ -48,6 +48,7 @@ class StateEstimator(object):
             new_stamped_states = []
             for stamp, states in stamped_states:
                 states = self._v_state_form(states)
+                states = self._order_states(states)
                 states = self._psi_state_limit(states)
                 new_stamped_states.append((stamp, states))
             self._stamped_states = new_stamped_states
@@ -57,12 +58,14 @@ class StateEstimator(object):
             raise ValueError
         else:
             self._stamped_input = stamped_input
+            self._add_time_from_input()
 
     def set_stamped_output(self, stamped_output=None):
         if stamped_output is None:
             raise ValueError
         else:
             self._stamped_output = stamped_output
+            self._add_time_from_output()
 
     @staticmethod
     def _v_state_form(states=None):
@@ -81,7 +84,7 @@ class StateEstimator(object):
             raise ValueError
         else:
             new_states = []
-            for x, y, psi, v, dpsi in zip(states):
+            for x, y, v, psi, dpsi in zip(*states):
                 k = abs(int(psi / (2 * np.pi)))
                 if psi > 2 * np.pi:
                     psi -= 2 * np.pi * k
@@ -89,6 +92,24 @@ class StateEstimator(object):
                     psi += 2 * np.pi * (k + 1)
                 new_states.append((x, y, v, psi, dpsi))
             return new_states
+
+    @staticmethod
+    def _order_states(states=None):
+        if states is None:
+            raise ValueError
+        else:
+            new_states = []
+            for x, y, psi, v, dpsi in zip(states):
+                new_states.append((x, y, v, psi, dpsi))
+            return new_states
+
+    def _add_time_from_output(self):
+        for t_y, _y in self._stamped_output:
+            self._time.append(t_y)
+
+    def _add_time_from_input(self):
+        for t_u, _u in self._stamped_input:
+            self._time.append(t_u)
 
 
 class KalmanStateEstimator(StateEstimator):
@@ -101,13 +122,9 @@ class KalmanStateEstimator(StateEstimator):
             self._kalman_filter = kalman_filter
 
     def get_stamped_states(self):
-        if len(self._time) != len(self._stamped_input) or len(self._stamped_input) != len(self._stamped_output):
-            raise ValueError
-        elif len(self._stamped_states) == len(self._time):
+        if len(self._stamped_states) == len(self._time):
             return self._stamped_states
         else:
-            self._add_time_from_input()
-            self._add_time_from_output()
             self._run_kalman()
             return self._stamped_states
 
@@ -122,14 +139,16 @@ class KalmanStateEstimator(StateEstimator):
             stamped_states = []
             stamped_Q = []
             for t in np.sort(self._time):
-                last_u_t, last_u = zip(self._stamped_input[u_index])
-                last_y_t, last_y = zip(self._stamped_output[y_index])
+                last_u_t, last_u = self._stamped_input[u_index]
+                last_y_t, last_y = self._stamped_output[y_index]
                 if t == last_u_t:
                     u = last_u
-                    u_index += 1
+                    if u_index != len(self._stamped_input)-1:
+                        u_index += 1
                 elif t == last_y_t:
                     y = last_y
-                    y_index += 1
+                    if y_index != len(self._stamped_output)-1:
+                        y_index += 1
                 self._kalman_filter.filter_iter((t, u, y))
                 states = self._kalman_filter.get_post_states()
                 states = self._psi_state_limit(states)
@@ -137,14 +156,6 @@ class KalmanStateEstimator(StateEstimator):
                 stamped_Q.append((t, self._kalman_filter.get_Q()))
             self._stamped_states = stamped_states
             self._stamped_Q = stamped_Q
-
-    def _add_time_from_output(self):
-        for t_y, _y in self._stamped_output:
-            self._time.append(t_y)
-
-    def _add_time_from_input(self):
-        for t_u, _u in self._stamped_input:
-            self._time.append(t_u)
 
 
 class StatePlotHandler(object):
@@ -228,7 +239,7 @@ class StatePlotHandler(object):
         else:
             t_list = []
             data_list = []
-            for t,data in zip(stamped_data):
+            for t,data in stamped_data:
                 t_list.append(t)
                 data_list.append(data)
             start, end = self._find_slice(t_list)
