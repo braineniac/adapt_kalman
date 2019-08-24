@@ -76,7 +76,7 @@ class StateEstimator(object):
             for x, y, psi, xdot, ydot, psidot in zip(states):
                 v = np.sqrt(xdot * xdot + ydot * ydot)
                 new_states.append((x, y, v, psi, psidot))
-            return new_states
+            return new_states[0]
 
     @staticmethod
     def _psi_state_limit(states=None):
@@ -91,7 +91,7 @@ class StateEstimator(object):
                 elif psi < -2 * np.pi * k:
                     psi += 2 * np.pi * (k + 1)
                 new_states.append((x, y, v, psi, dpsi))
-            return new_states
+            return new_states[0]
 
     @staticmethod
     def _order_states(states=None):
@@ -101,7 +101,7 @@ class StateEstimator(object):
             new_states = []
             for x, y, psi, v, dpsi in zip(states):
                 new_states.append((x, y, v, psi, dpsi))
-            return new_states
+            return new_states[0]
 
     def _add_time_from_output(self):
         for t_y, _y in self._stamped_output:
@@ -166,63 +166,111 @@ class StatePlotHandler(object):
             self._state_estimator = state_estimator
             self._start_slice = 0
             self._end_slice = np.inf
+            self._input_titles = ["Input u0", "Input u1"]
+            self._output_titles = ["Output y0", "Output y1"]
+            self._states_titles = ["x state", "y state", "v state", "phi state", "dphi state"]
 
-    def set_slice_times(self, start=None, end=None):
-        if not isinstance(start, float) or not isinstance(end, float) or start > end:
+    def get_input_titles(self):
+        return self._input_titles
+
+    def get_output_titles(self):
+        return self._output_titles
+
+    def get_states_titles(self):
+        return self._states_titles
+
+    def get_input_plot(self):
+        plot_u = [[], []]
+        plot_u_t = []
+        sliced_stamped_input = self._slice_data(self._state_estimator.get_stamped_input())
+        for u_stamped in sliced_stamped_input:
+            t, u = u_stamped
+            u0, u1 = u
+            plot_u[0].append(u0)
+            plot_u[1].append(u1)
+            plot_u_t.append(t)
+        return plot_u_t, plot_u
+
+    def get_output_plot(self):
+        plot_y = [[], []]
+        plot_y_t = []
+        sliced_stamped_output = self._slice_data(self._state_estimator.get_stamped_output())
+        for y_stamped in sliced_stamped_output:
+            t, y = y_stamped
+            y0, y1 = y
+            plot_y[0].append(y0)
+            plot_y[1].append(y1)
+            plot_y_t.append(t)
+        return plot_y_t, plot_y
+
+    def get_states_plot(self):
+        plot_states = [[], [], [], [], []]
+        plot_states_t = []
+        slices_stamped_states = self._slice_data(self._state_estimator.get_stamped_states())
+        for states_stamped in slices_stamped_states:
+            t, states = states_stamped
+            x0, x1, x2, x3, x4 = states
+            plot_states[0].append(x0)
+            plot_states[1].append(x1)
+            plot_states[2].append(x2)
+            plot_states[3].append(x3)
+            plot_states[4].append(x4)
+            plot_states_t.append(t)
+        return plot_states_t, plot_states
+
+    def get_Q_plot(self):
+        plot_Q = []
+        plot_t = []
+        for stamped_Q in self._state_estimator.get_stamped_Q():
+            t, Q = stamped_Q
+            plot_Q.append(Q)
+            plot_t.append(t)
+        return plot_t, plot_Q
+
+    def set_slice_times(self, start=0, end=np.inf):
+        if start > end:
             raise ValueError
         else:
             self._start_slice = start
             self._end_slice = end
-
-    def get_states(self):
-        stamped_states = self._state_estimator.get_stamped_states()
-        return self._slice_data(stamped_states)
-
-    def get_input(self):
-        stamped_input = self._state_estimator.get_stamped_input()
-        return self._slice_data(stamped_input)
-
-    def get_output(self):
-        stamped_output = self._state_estimator.get_stamped_output()
-        return self._slice_data(stamped_output)
 
     def get_Q(self):
         stamped_Q = self._state_estimator.get_stamped_Q()
         return self._slice_data(stamped_Q)
 
     def export_output(self, pre="", post=""):
-        t, y = self.get_output()
+        t, y = self.get_output_plot()
         y0, y1 = y
-        np.savetxt("../../data/{}_y0_{}.csv".format(pre, post), np.transpose([t, y0]), header='t y0', comments='# ',
+        np.savetxt("../../data/{}y0{}.csv".format(pre, post), np.transpose([t, y0]), header='t y0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_y1_{}.csv".format(pre, post), np.transpose([t, y1]), header='t y1', comments='# ',
+        np.savetxt("../../data/{}y1{}.csv".format(pre, post), np.transpose([t, y1]), header='t y1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_input(self, pre="", post=""):
-        t, u = self.get_input()
+        t, u = self.get_input_plot()
         u0, u1 = u
-        np.savetxt("../../data/{}_u0_{}.csv".format(pre, post), np.transpose([t, u0]), header='t u0', comments='# ',
+        np.savetxt("../../data/{}u0{}.csv".format(pre, post), np.transpose([t, u0]), header='t u0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_u1_{}.csv".format(pre, post), np.transpose([t, u1]), header='t u1', comments='# ',
+        np.savetxt("../../data/{}u1{}.csv".format(pre, post), np.transpose([t, u1]), header='t u1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_states(self, pre="", post=""):
-        t, x = self.get_states()
+        t, x = self.get_states_plot()
         x0, x1, x2, x3, x4 = x
-        np.savetxt("../../data/{}_x0_{}.csv".format(pre, post), np.transpose([t, x0]), header='t x0', comments='# ',
+        np.savetxt("../../data/{}x0{}.csv".format(pre, post), np.transpose([t, x0]), header='t x0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_x1_{}.csv".format(pre, post), np.transpose([t, x1]), header='t x1', comments='# ',
+        np.savetxt("../../data/{}x1{}.csv".format(pre, post), np.transpose([t, x1]), header='t x1', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_x2_{}.csv".format(pre, post), np.transpose([t, x2]), header='t x2', comments='# ',
+        np.savetxt("../../data/{}x2{}.csv".format(pre, post), np.transpose([t, x2]), header='t x2', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_x3_{}.csv".format(pre, post), np.transpose([t, x3]), header='t x3', comments='# ',
+        np.savetxt("../../data/{}x3{}.csv".format(pre, post), np.transpose([t, x3]), header='t x3', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}_x4_{}.csv".format(pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
+        np.savetxt("../../data/{}x4{}.csv".format(pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_Q(self, pre="", post=""):
-        t, Q = self.get_stamped_Q()
-        np.savetxt("../../data/{}_Q_{}.csv".format(pre, post), np.transpose([t, Q]), header='t Q', comments='# ',
+        t, Q = self.get_Q_plot()
+        np.savetxt("../../data/{}Q{}.csv".format(pre, post), np.transpose([t, Q]), header='t Q', comments='# ',
                    delimiter=' ', newline='\n')
 
     @staticmethod
@@ -239,14 +287,15 @@ class StatePlotHandler(object):
         else:
             t_list = []
             data_list = []
-            for t,data in stamped_data:
+            for t, data in stamped_data:
                 t_list.append(t)
                 data_list.append(data)
+            t_list = self._set_zero_time(0, t_list)
             start, end = self._find_slice(t_list)
-            new_points = []
             t_list = self._set_zero_time(start, t_list)
+            new_points = []
             for t, data in zip(t_list[start:end], data_list[start:end]):
-                new_points.append((t,data))
+                new_points.append((t, data))
             return new_points
 
     def _find_slice(self, t_array=None):
@@ -258,9 +307,9 @@ class StatePlotHandler(object):
             for t in t_array:
                 if t <= self._end_slice:
                     end_index += 1
-                if t <= self._start_slice:
+                if t < self._start_slice:
                     start_index += 1
-            end_index = len(t_array) - end_index
+            end_index = end_index - len(t_array)
             return start_index, end_index
 
     @staticmethod
