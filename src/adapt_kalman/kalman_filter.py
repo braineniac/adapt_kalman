@@ -29,38 +29,39 @@ class KalmanFilter(object):
             self._alpha = alpha
             self._beta = beta
 
-            self._R_k = R_k                           # Observation Covariance Matrix
-            self._Q_k = Q_k                           # Process Covariance Matrix
+            self._R_k = R_k  # Observation Covariance Matrix
+            self._Q_k = Q_k  # Process Covariance Matrix
 
-            self._u_k = np.zeros((2, 1))              # Input Vector
-            self._y_k = np.zeros((2, 1))              # Measurement Vector
-            self._L_k = np.zeros((5, 2))              # Kalman Gain Matrix
+            self._u_k = np.zeros((2, 1))  # Input Vector
+            self._y_k = np.zeros((2, 1))  # Measurement Vector
+            self._L_k = np.zeros((5, 2))  # Kalman Gain Matrix
 
-            x0[3] = np.radians(x0[3])
-            x0 = np.array(x0).reshape((5, 1))         # Initial State Vector
-            self._X_k_pre = x0                        # A Priori state vector
-            self._X_k_post = np.zeros((5, 1))         # A Posteriori state vector
-            self._X_k_extr = np.zeros((5, 1))         # Extrapolated state vector
+            x0_rad = list(x0)
+            x0_rad[3] = np.radians(x0[3])
+            x0 = np.array(x0_rad).reshape((5, 1))  # Initial State Vector
+            self._X_k_pre = x0  # A Priori state vector
+            self._X_k_post = np.zeros((5, 1))  # A Posteriori state vector
+            self._X_k_extr = np.zeros((5, 1))  # Extrapolated state vector
 
-            self._P_k_pre = np.zeros((5, 5))          # A Priori Parameter Covariance Matrix
-            self._P_k_post = np.zeros((5, 5))         # A Posteriori Parameter Covariance Matrix
-            self._P_k_extr = np.zeros((5, 5))         # Extrapolated Parameter Covariance Matrix
+            self._P_k_pre = np.zeros((5, 5))  # A Priori Parameter Covariance Matrix
+            self._P_k_post = np.zeros((5, 5))  # A Posteriori Parameter Covariance Matrix
+            self._P_k_extr = np.zeros((5, 5))  # Extrapolated Parameter Covariance Matrix
 
-            self._Phi_k = np.zeros((5, 5))            # Dynamic Coefficient Matrix
-            self._Gamma_k = np.zeros((5, 2))          # Input Coupling Matrix
-            self._G_k = np.zeros((5, 2))              # Process Noise Input Coupling Matrix
+            self._Phi_k = np.zeros((5, 5))  # Dynamic Coefficient Matrix
+            self._Gamma_k = np.zeros((5, 2))  # Input Coupling Matrix
+            self._G_k = np.zeros((5, 2))  # Process Noise Input Coupling Matrix
             self._G_k[2][0] = self._alpha
             self._G_k[4][1] = self._beta
 
-            self._C_k = np.zeros((2, 5))              # Measurement Sensitivity Matrix
-            self._D_k = np.zeros((2, 2))              # Output Coupling Matrix
-            self._H_k = np.zeros((2, 2))              # Process Noise Output Coupling Matrix
+            self._C_k = np.zeros((2, 5))  # Measurement Sensitivity Matrix
+            self._D_k = np.zeros((2, 2))  # Output Coupling Matrix
+            self._H_k = np.zeros((2, 2))  # Process Noise Output Coupling Matrix
 
             self._dt = 0
             self._t = 0
 
     def filter_iter(self, tuy=(None, None, None)):
-        u, y, t = tuy
+        t, u, y = tuy
         if t is None and u is None and y is None:
             raise ValueError
         else:
