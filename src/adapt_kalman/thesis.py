@@ -35,57 +35,26 @@ class Thesis(object):
         plt.figure(Thesis.figure)
         Thesis.figure += 1
 
-    def __init__(self):
-        self.R_k = np.zeros((2, 2))
-        self.R_k[0][0] = 0.04
-        self.R_k[1][1] = 0.02
+    @staticmethod
+    def get_sys_input(bag=None, topic=None):
+        bag_system_io = BagSystemIO()
+        bag_reader = BagReader(bag)
+        sys_input = bag_system_io.get_input(bag_reader.read_twist(topic))
+        return sys_input
 
-        self.Q_k = np.zeros((2, 2))
-        self.Q_k[0][0] = self.R_k[0][0] * 0.001
-        self.Q_k[1][1] = self.R_k[1][1] * 1
+    @staticmethod
+    def get_sys_output(bag=None, topic=None):
+        bag_system_io = BagSystemIO()
+        bag_reader = BagReader(bag)
+        sys_output = bag_system_io.get_output(bag_reader.read_imu(topic))
+        return sys_output
 
-        self.alpha = 1
-        self.beta = 1
-
-        self.slice_times = (0, np.inf)
-        self.bag = None
-
-
-class Tuner(Thesis):
-    def __init__(self):
-        super(Tuner, self).__init__()
-        self.bag = ""
-        self.bag_reader = None
-        self.bag_system_io = BagSystemIO()
-        self.state_plots = []
-        self.imu_topic = "/imu"
-        self.twist_topic = "/fake_encoder/twist"
-        self.slice = [0, 35]
-        self.legends = []
-
-    def get_sys_input(self):
-        return self.bag_system_io.get_input(self.bag_reader.read_twist(self.twist_topic))
-
-    def get_sys_output(self):
-        return self.bag_system_io.get_output(self.bag_reader.read_imu(self.imu_topic))
-
-    def get_kalman_filters(self):
-        raise NotImplementedError
-
-    def set_state_plots(self):
-        for kalman_filter in self.get_kalman_filters():
-            state_estimator = KalmanStateEstimator(kalman_filter)
-            state_estimator.set_stamped_input(self.get_sys_input())
-            state_estimator.set_stamped_output(self.get_sys_output())
-            plot_handler = StatePlotHandler(state_estimator)
-            plot_handler.set_slice_times(self.slice[0], self.slice[1])
-            self.state_plots.append(plot_handler)
-
-    def plot(self):
-        options = ["b", "k", "r", "m", "g"]
-        self.plot_input_figure(options, self.legends)
-        self.plot_output_figure()
-        self.plot_states_figure(options, self.legends)
+    @staticmethod
+    def get_sys_states(bag=None, topic=None):
+        bag_system_io = BagSystemIO()
+        bag_reader = BagReader(bag)
+        sys_states = bag_system_io.get_states(bag_reader.read_odom(topic))
+        return sys_states
 
     @staticmethod
     def add_plot(stamped_plot=None, dimension=None, option=None, legend=None):
@@ -98,6 +67,58 @@ class Tuner(Thesis):
             else:
                 plt.plot(t, plot[dimension], option, label=legend)
                 plt.legend()
+
+    def __init__(self):
+        self.R_k = np.zeros((2, 2))
+        self.R_k[0][0] = 0.04
+        self.R_k[1][1] = 0.02
+
+        self.Q_k = np.zeros((2, 2))
+        self.Q_k[0][0] = self.R_k[0][0] * 0.001
+        self.Q_k[1][1] = self.R_k[1][1] * 1
+
+        self.alpha = 1
+        self.beta = 1
+
+        self.slice = (0, np.inf)
+        self.bag = None
+
+
+class Tuner(Thesis):
+    def __init__(self):
+        super(Tuner, self).__init__()
+        self.bag = []
+        self.state_plots = []
+        self.imu_topic = None
+        self.twist_topic = None
+        self.slice = None
+        self.legends = []
+
+    def get_kalman_filters(self):
+        raise NotImplementedError
+
+    def run(self):
+        kalman_filters = self.get_kalman_filters()
+        input = self.get_sys_input(self.bag, self.twist_topic)
+        output = self.get_sys_output(self.bag, self.imu_topic)
+        self.state_plots = self.get_kalman_state_plots(kalman_filters, input, output)
+
+    def get_kalman_state_plots(self, kalman_filters=None, input=None, output=None):
+        state_plots = []
+        for kalman_filter in kalman_filters:
+            state_estimator = KalmanStateEstimator(kalman_filter)
+            state_estimator.set_stamped_input(input)
+            state_estimator.set_stamped_output(output)
+            plot_handler = StatePlotHandler(state_estimator)
+            plot_handler.set_slice_times(self.slice[0], self.slice[1])
+            state_plots.append(plot_handler)
+        return state_plots
+
+    def plot(self):
+        options = ["b", "k", "r", "m", "g"]
+        self.plot_input_figure(options, self.legends)
+        self.plot_output_figure()
+        self.plot_states_figure(options, self.legends)
 
     def plot_input_figure(self, options=None, legends=None):
         self.add_figure()
@@ -135,12 +156,38 @@ class Tuner(Thesis):
             state_plot.export_states(pre)
 
 
+class CompareTwo(Tuner):
+    def __init__(self, bag_base=None, bag_compare=None, twist_topic=None, imu_topic=None, slice=None):
+        super(Tuner, self).__init__()
+        self.bag_base = bag_base
+        self.bag_compare = bag_compare
+        self.imu_topic = imu_topic
+        self.twist_topic = twist_topic
+        self.slice = slice
+        self.legends = ["simple", "multiple"]
+
+    def get_kalman_filters(self):
+        kalman_filters = []
+        kalman_filters.append(KalmanFilter(alpha=self.alpha, beta=self.beta, Q_k=self.Q_k, R_k=self.R_k))
+        return kalman_filters
+
+    def run(self):
+        kalman_filter_base = self.get_kalman_filters()
+        kalman_filter_compare = self.get_kalman_filters()
+        input_base = self.get_sys_input(self.bag_base, self.twist_topic)
+        input_compare = self.get_sys_input(self.bag_compare, self.twist_topic)
+        output_base = self.get_sys_output(self.bag_base, self.imu_topic)
+        output_compare = self.get_sys_output(self.bag_compare, self.imu_topic)
+        state_plots_base = self.get_kalman_state_plots(kalman_filter_base, input_base, output_base)
+        state_plots_compare = self.get_kalman_state_plots(kalman_filter_compare, input_compare, output_compare)
+        self.state_plots = state_plots_base + state_plots_compare
+
+
 class AlphaTuner(Tuner):
-    def __init__(self, alphas=None, bag=None, imu_topic=None, twist_topic=None, slice=None):
+    def __init__(self, alphas=None, bag=None, twist_topic=None,imu_topic=None, slice=None):
         super(AlphaTuner, self).__init__()
         self.alpha = alphas
         self.bag = bag
-        self.bag_reader = BagReader(self.bag)
         self.imu_topic = imu_topic
         self.twist_topic = twist_topic
         self.slice = slice
@@ -160,11 +207,10 @@ class AlphaTuner(Tuner):
 
 
 class BetaTuner(Tuner):
-    def __init__(self, betas=None, bag=None, imu_topic=None, twist_topic=None, slice=None):
+    def __init__(self, betas=None, bag=None, twist_topic=None,imu_topic=None ,slice=None):
         super(BetaTuner, self).__init__()
         self.beta = betas
         self.bag = bag
-        self.bag_reader = BagReader(self.bag)
         self.imu_topic = imu_topic
         self.twist_topic = twist_topic
         self.legends = [str(x) for x in self.beta]
@@ -194,11 +240,15 @@ if __name__ == '__main__':
     betas_bag = "/home/dan/ws/rosbag/garry3/5turns.bag"
     betas_slice = [0, 30]
 
-    alphas = AlphaTuner(alphas, alphas_bag, imu_topic, twist_topic, alpha_slice)
-    alphas.set_state_plots()
+    alphas = AlphaTuner(alphas, alphas_bag, twist_topic, imu_topic, alpha_slice)
+    alphas.run()
     alphas.plot()
-    betas = BetaTuner(betas, betas_bag, imu_topic, twist_topic, betas_slice)
-    betas.set_state_plots()
+    betas = BetaTuner(betas, betas_bag,twist_topic, imu_topic, betas_slice)
+    betas.run()
     betas.plot()
-    plt.show()
     #alphas.export()
+    compare_bag = "/home/dan/ws/rosbag/garry3/5m_m.bag"
+    compare = CompareTwo(alphas_bag, compare_bag,  twist_topic,imu_topic, alpha_slice)
+    compare.run()
+    compare.plot()
+    plt.show()
