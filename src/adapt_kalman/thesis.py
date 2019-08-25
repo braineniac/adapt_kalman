@@ -28,6 +28,13 @@ from matplotlib import pyplot as plt
 
 
 class Thesis(object):
+    figure = 1
+
+    @staticmethod
+    def add_figure():
+        plt.figure(Thesis.figure)
+        Thesis.figure += 1
+
     def __init__(self):
         self.R_k = np.zeros((2, 2))
         self.R_k[0][0] = 0.04
@@ -43,25 +50,18 @@ class Thesis(object):
         self.slice_times = (0, np.inf)
         self.bag = None
 
-        self.figure = 1
 
-    def add_figure(self):
-        plt.figure(self.figure)
-        self.figure += 1
-
-
-class AlphaTuner(Thesis):
+class Tuner(Thesis):
     def __init__(self):
-        super(AlphaTuner, self).__init__()
-        self.alpha = [0.8, 0.9, 1, 1.1, 1.2]
-        self.bag = "/home/dan/ws/rosbag/garry3/5m_slow.bag"
+        super(Tuner, self).__init__()
+        self.bag = ""
+        self.bag_reader = None
+        self.bag_system_io = BagSystemIO()
+        self.state_plots = []
         self.imu_topic = "/imu"
         self.twist_topic = "/fake_encoder/twist"
         self.slice = [0, 35]
-
-        self.bag_reader = BagReader(self.bag)
-        self.bag_system_io = BagSystemIO()
-        self.state_plots = []
+        self.legends = []
 
     def get_sys_input(self):
         return self.bag_system_io.get_input(self.bag_reader.read_twist(self.twist_topic))
@@ -69,14 +69,11 @@ class AlphaTuner(Thesis):
     def get_sys_output(self):
         return self.bag_system_io.get_output(self.bag_reader.read_imu(self.imu_topic))
 
+    def get_kalman_filters(self):
+        raise NotImplementedError
+
     def set_state_plots(self):
-        for alpha in self.alpha:
-            kalman_filter = KalmanFilter(
-                alpha=alpha,
-                beta=self.beta,
-                Q_k=self.Q_k,
-                R_k=self.R_k
-            )
+        for kalman_filter in self.get_kalman_filters():
             state_estimator = KalmanStateEstimator(kalman_filter)
             state_estimator.set_stamped_input(self.get_sys_input())
             state_estimator.set_stamped_output(self.get_sys_output())
@@ -86,11 +83,9 @@ class AlphaTuner(Thesis):
 
     def plot(self):
         options = ["b", "k", "r", "m", "g"]
-        legends = [str(x) for x in self.alpha]
-        self.plot_input_figure(options, legends)
+        self.plot_input_figure(options, self.legends)
         self.plot_output_figure()
-        self.plot_states_figure(options, legends)
-        plt.show()
+        self.plot_states_figure(options, self.legends)
 
     @staticmethod
     def add_plot(stamped_plot=None, dimension=None, option=None, legend=None):
@@ -139,8 +134,71 @@ class AlphaTuner(Thesis):
             state_plot.export_output(pre)
             state_plot.export_states(pre)
 
+
+class AlphaTuner(Tuner):
+    def __init__(self, alphas=None, bag=None, imu_topic=None, twist_topic=None, slice=None):
+        super(AlphaTuner, self).__init__()
+        self.alpha = alphas
+        self.bag = bag
+        self.bag_reader = BagReader(self.bag)
+        self.imu_topic = imu_topic
+        self.twist_topic = twist_topic
+        self.slice = slice
+        self.legends = [str(x) for x in self.alpha]
+
+    def get_kalman_filters(self):
+        kalman_filters = []
+        for alpha in self.alpha:
+            kalman_filter = KalmanFilter(
+                alpha=alpha,
+                beta=self.beta,
+                Q_k=self.Q_k,
+                R_k=self.R_k
+            )
+            kalman_filters.append(kalman_filter)
+        return kalman_filters
+
+
+class BetaTuner(Tuner):
+    def __init__(self, betas=None, bag=None, imu_topic=None, twist_topic=None, slice=None):
+        super(BetaTuner, self).__init__()
+        self.beta = betas
+        self.bag = bag
+        self.bag_reader = BagReader(self.bag)
+        self.imu_topic = imu_topic
+        self.twist_topic = twist_topic
+        self.legends = [str(x) for x in self.beta]
+        self.slice = slice
+
+    def get_kalman_filters(self):
+        kalman_filters = []
+        for beta in self.beta:
+            kalman_filter = KalmanFilter(
+                alpha=self.alpha,
+                beta=beta,
+                Q_k=self.Q_k,
+                R_k=self.R_k
+            )
+            kalman_filters.append(kalman_filter)
+        return kalman_filters
+
+
 if __name__ == '__main__':
-    alphas = AlphaTuner()
+    imu_topic = "/imu"
+    twist_topic = "/fake_encoder/twist"
+
+    alphas_bag = "/home/dan/ws/rosbag/garry3/5m_slow.bag"
+    alphas = [0.8, 0.9, 1, 1.1, 1.2]
+    alpha_slice = [0, 35]
+    betas = [0.8, 0.9, 1, 1.1, 1.2]
+    betas_bag = "/home/dan/ws/rosbag/garry3/5turns.bag"
+    betas_slice = [0, 30]
+
+    alphas = AlphaTuner(alphas, alphas_bag, imu_topic, twist_topic, alpha_slice)
     alphas.set_state_plots()
     alphas.plot()
-    alphas.export()
+    betas = BetaTuner(betas, betas_bag, imu_topic, twist_topic, betas_slice)
+    betas.set_state_plots()
+    betas.plot()
+    plt.show()
+    #alphas.export()
