@@ -41,14 +41,14 @@ class StateEstimator(object):
     def get_stamped_Q(self):
         return self._stamped_Q
 
-    def set_states(self, stamped_states=None):
+    def set_stamped_states(self, stamped_states=None):
         if stamped_states is None:
             raise ValueError
         else:
             new_stamped_states = []
             for stamp, states in stamped_states:
                 states = self._v_state_form(states)
-                states = self._order_states(states)
+                states = self._order_state(states)
                 states = self._psi_state_limit(states)
                 new_stamped_states.append((stamp, states))
             self._stamped_states = new_stamped_states
@@ -68,40 +68,34 @@ class StateEstimator(object):
             self._add_time_from_output()
 
     @staticmethod
-    def _v_state_form(states=None):
-        if states is None:
+    def _v_state_form(state=None):
+        if state is None:
             raise ValueError
         else:
-            new_states = []
-            for x, y, psi, xdot, ydot, psidot in zip(states):
-                v = np.sqrt(xdot * xdot + ydot * ydot)
-                new_states.append((x, y, v, psi, psidot))
-            return new_states[0]
+            x, y, psi, xdot, ydot, psidot = state
+            v = np.sqrt(xdot * xdot + ydot * ydot)
+            return x, y, v, psi, psidot
 
     @staticmethod
-    def _psi_state_limit(states=None):
-        if states is None:
+    def _psi_state_limit(state=None):
+        if state is None:
             raise ValueError
         else:
-            new_states = []
-            for x, y, v, psi, dpsi in zip(*states):
-                k = abs(int(psi / (2 * np.pi)))
-                if psi > 2 * np.pi:
-                    psi -= 2 * np.pi * k
-                elif psi < -2 * np.pi * k:
-                    psi += 2 * np.pi * (k + 1)
-                new_states.append((x, y, v, psi, dpsi))
-            return new_states[0]
+            x, y, v, psi, dpsi = state
+            k = abs(int(psi / (2 * np.pi)))
+            if psi > 2 * np.pi:
+                psi -= 2 * np.pi * k
+            elif psi < -2 * np.pi * k:
+                psi += 2 * np.pi * (k + 1)
+            return x, y, v, psi, dpsi
 
     @staticmethod
-    def _order_states(states=None):
-        if states is None:
+    def _order_state(state=None):
+        if state is None:
             raise ValueError
         else:
-            new_states = []
-            for x, y, psi, v, dpsi in zip(states):
-                new_states.append((x, y, v, psi, dpsi))
-            return new_states[0]
+            x, y, psi, v, dpsi = state
+            return x, y, v, psi, dpsi
 
     def _add_time_from_output(self):
         for t_y, _y in self._stamped_output:

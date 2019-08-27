@@ -44,7 +44,7 @@ class EKFGenerator(BagGenerator):
     def __init__(self, bag_path=None, out_path=None, prefix="ekf_"):
         super(EKFGenerator, self).__init__(bag_path, out_path, prefix)
 
-    def generate(self, postfix=None, r1=None, r2=None, alpha=None, beta=None):
+    def generate(self, r1=None, r2=None, alpha=None, beta=None, postfix=""):
         if r1 is None or r2 is None or alpha is None or beta is None:
             raise ValueError
         else:
@@ -65,7 +65,7 @@ class IMUTransformGenerator(BagGenerator):
     def __init__(self, bag_path=None, out_path=None, prefix="trans_"):
         super(IMUTransformGenerator, self).__init__(bag_path, out_path, prefix)
 
-    def generate(self, postfix=None):
+    def generate(self, postfix=""):
         cli_args = [
             "adapt_kalman",
             "transform_data.launch",
@@ -78,4 +78,4 @@ class IMUTransformGenerator(BagGenerator):
 def get_filename_from_path(path=None):
     if path is not None:
         name = path.split('/')[-1]
-        print(name)
+        return name
