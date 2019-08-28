@@ -21,8 +21,8 @@ import pandas as pd
 class MovingWeightedWindow(object):
 
     def __init__(self, size=0):
-        if size is None:
-            raise AttributeError
+        if not size:
+            raise ValueError
         else:
             self._size = size
             self._weights = []
@@ -35,7 +35,7 @@ class MovingWeightedWindow(object):
         return self._size
 
     def set_window(self, array=None):
-        if array is None:
+        if not array:
             raise ValueError
         else:
             window = []
@@ -62,8 +62,8 @@ class MovingWeightedSigWindow(MovingWeightedWindow):
 
     def __init__(self, size, alpha=10):
         super(MovingWeightedSigWindow, self).__init__(size)
-        if alpha is None:
-            raise AttributeError
+        if not alpha:
+            raise ValueError
         else:
             self._alpha = alpha
             self._set_weights()

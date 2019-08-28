@@ -17,9 +17,17 @@
 import roslaunch
 
 
+def get_filename_from_path(path=None):
+    if not path:
+        raise ValueError
+    else:
+        name = path.split('/')[-1]
+        return name
+
+
 class BagGenerator(object):
     def __init__(self, bag_path=None, out_path=None, prefix=None):
-        if bag_path is None or out_path is None:
+        if not bag_path or not out_path:
             raise ValueError
         else:
             self.bag_path = bag_path
@@ -28,8 +36,8 @@ class BagGenerator(object):
 
     @staticmethod
     def _generate(cli_args=None):
-        if cli_args is None:
-            raise AttributeError
+        if not cli_args:
+            raise ValueError
         else:
             uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
             roslaunch.configure_logging(uuid)
@@ -45,7 +53,7 @@ class EKFGenerator(BagGenerator):
         super(EKFGenerator, self).__init__(bag_path, out_path, prefix)
 
     def generate(self, r1=None, r2=None, alpha=None, beta=None, postfix=""):
-        if r1 is None or r2 is None or alpha is None or beta is None:
+        if not r1 or not r2 or not alpha or not beta:
             raise ValueError
         else:
             cli_args = [
@@ -73,9 +81,3 @@ class IMUTransformGenerator(BagGenerator):
             "output:={}".format(self.out_path + self.prefix + get_filename_from_path(self.bag_path) + postfix)
         ]
         super(IMUTransformGenerator, self)._generate(cli_args)
-
-
-def get_filename_from_path(path=None):
-    if path is not None:
-        name = path.split('/')[-1]
-        return name

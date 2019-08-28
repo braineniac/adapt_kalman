@@ -24,7 +24,7 @@ class KalmanFilter(object):
 
     def __init__(self, Q_k=None, R_k=None, alpha=1., beta=1., x0=(0, 0, 0, 0, 0)):
         if np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1:
-            raise AttributeError
+            raise ValueError
         else:
             self._alpha = alpha
             self._beta = beta
@@ -62,7 +62,7 @@ class KalmanFilter(object):
 
     def filter_iter(self, tuy=(None, None, None)):
         t, u, y = tuy
-        if t is None and u is None and y is None:
+        if not t and not u and not y:
             raise ValueError
         else:
             self._dt = t - self._t
@@ -139,7 +139,7 @@ class AdaptiveKalmanFilter(KalmanFilter):
 
     def __init__(self, Q_k=None, R_k=None, alpha=1.0, beta=1.0, window=None, M_k=None, x0=(0, 0, 0, 0, 0)):
         if not isinstance(window, MovingWeightedWindow) or np.count_nonzero(M_k) < 2:
-            raise AttributeError
+            raise ValueError
         else:
             super(AdaptiveKalmanFilter, self).__init__(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k, x0=x0)
             self._window = window
