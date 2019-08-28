@@ -15,7 +15,8 @@
 # limitations under the License.
 
 import numpy as np
-
+import sys
+np.set_printoptions(threshold=sys.maxsize)
 from simulator_tools import *
 
 
@@ -62,13 +63,13 @@ class LineSimulator(SystemIOSimulator):
             self._peak_vel = peak_vel
 
     def _set_input(self):
-        box_function = get_boxcar(self._time, 0.8, self._peak_vel)
-        zeros = np.zeros(self._time)
+        u0 = np.zeros(len(self._time)).tolist()
+        box_function = get_boxcar(u0, 0.8, self._peak_vel)
+        zeros = np.zeros(len(self._time))
         self._input = (box_function, zeros)
 
     def _set_output(self):
-        _t, u = self._input
-        u0, _u1 = u
+        u0, _u1 = self._input
 
         gauss = get_gauss(0.01, self._time)
         conv = np.convolve(u0, gauss, mode="same")
@@ -77,16 +78,15 @@ class LineSimulator(SystemIOSimulator):
 
         accel = 0
         accel += grad
-        accel += noise_still
-        accel += noise_moving
+        accel += moving_noise
 
-        zeros = np.zeros(self._time)
-        self.output = (accel, zeros)
+        zeros = np.zeros(len(self._time))
+        self._output = (accel, zeros)
 
 
 class OctagonSimulator(SystemIOSimulator):
 
-    def __init__(self, peak_vel=None, peak_turn=None, time=None):
+    def __init__(self, time=None, peak_vel=None, peak_turn=None):
         if peak_vel is None or peak_turn is None:
             raise ValueError
         else:
@@ -100,23 +100,26 @@ class OctagonSimulator(SystemIOSimulator):
         self._input = (u0, u1)
 
     def _get_u0(self):
-        u0 = np.linspace(0, self._time, self._N)
+        u0 = np.zeros(len(self._time)).tolist()
         u0_sections = divide_into_sections(u0, 8)
+        new_u0_sections = []
         for u0_section in u0_sections:
-            u0_section = get_boxcar(u0_section, 0.8, self._peak_vel)
-        u0 = merge_sublist(u0_sections)
+            new_u0_sections.append(get_boxcar(u0_section, 0.8, self._peak_vel))
+        u0 = np.concatenate(new_u0_sections).tolist()
         return u0
 
     def _get_u1(self, u0=None):
         if u0 is None:
             return ValueError
         else:
-            section_indexes = self.get_zero_section_indexes(u0)
-            sections = self.get_sections_by_indexes(u0, section_indexes)
+            u0 = self._get_u0()
+            section_indexes = get_zero_section_indexes(u0)
+            sections = get_sections_by_indexes(u0, section_indexes)
+            new_sections = []
             for section in sections:
-                section = self.get_boxcar(section, 0.6, self._peak_turn)
-            u1 = np.linspace(0, self._time, self._N)
-            u1 = self.set_sections_by_indexes(u1, sections, section_indexes)
+                new_sections.append(get_boxcar(section, 0.6, self._peak_turn))
+            u1 = np.zeros(len(self._time))
+            u1 = set_sections_by_indexes(u1, new_sections, section_indexes)
             return u1
 
     def _set_output(self):
@@ -125,17 +128,17 @@ class OctagonSimulator(SystemIOSimulator):
         self._output = (y0, y1)
 
     def _get_y0(self):
-        u0 = self._input[0]
+        u0 = self._get_u0()
         gauss = get_gauss(0.1)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 20 * np.gradient(conv)
-        noise_still = np.random.normal(0, 0.08, self._N)
+        noise_still = np.random.normal(0, 0.08, len(u0))
         noise_moving = get_moving_noise(conv, 3, 0.1)
         return grad + noise_still + noise_moving
 
     def _get_y1(self):
-        gauss = get_gauss(0.1, 3 / 7.)
-        u1 = self._input[1]
+        gauss = get_gauss(0.1, (3/7., 3/7.))
+        u1 = self._get_u1(self._get_u0())
         conv = np.convolve(u1, gauss, mode="same")
         noise = get_moving_noise(conv, 1, 0.1)
         return conv + noise

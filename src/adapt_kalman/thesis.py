@@ -222,11 +222,14 @@ class AdaptiveKalmanExperiment(KalmanExperiment):
     def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=None):
         super(AdaptiveKalmanExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
 
+    def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
+        return self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
+
     def run(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
-        kalman_filter = self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
+        kalman_filters = self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
         input = self.get_sys_input(self.bag, self.twist_topic)
-        output = self.get_sys_input(self.bag, self.twist_topic)
-        self.set_kalman_state_plots(kalman_filter, input, output)
+        output = self.get_sys_output(self.bag, self.imu_topic)
+        self.set_kalman_state_plots(kalman_filters, input, output)
 
 
 class EKFExperiment(KalmanExperiment):
@@ -242,6 +245,29 @@ class EKFExperiment(KalmanExperiment):
         output = self.get_sys_output(self.bag, self.imu_topic)
         states = self.get_sys_states(self.bag, self.odom_topic)
         self.set_state_plots(states, input, output)
+
+
+class KalmanSimulator(Experiment):
+    def __init__(self, input=None, output=None, slice=(0, np.inf), legend=[]):
+        if not input or not output:
+            raise ValueError
+        else:
+            super(KalmanSimulator, self).__init__(slice, legend)
+            self.input = input
+            self.output = output
+
+    def run(self, alpha=None, beta=None, Q_k=None, R_k=None):
+        kalman_filter = self.get_kalman_filter(alpha, beta, Q_k, R_k)
+        self.set_kalman_state_plots(kalman_filter, self.input, self.output)
+
+
+class AdaptiveKalmanSimulator(KalmanSimulator):
+    def __init__(self, input=None, output=None, slice=(0, np.inf), legend=[]):
+        super(AdaptiveKalmanSimulator, self).__init__(input, output, slice, legend)
+
+    def run(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
+        kalman_filter = self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
+        self.set_kalman_state_plots(kalman_filter, self.input, self.output)
 
 
 class Compare(Experiment):
@@ -336,6 +362,54 @@ class ThesisDataExporter(object):
             compare.run()
             compare.plot()
 
+    def get_line_kalman_simulation(self, time=None, peak_vel=None):
+        if not time or not peak_vel:
+            raise ValueError
+        else:
+            line_sim = LineSimulator(time, peak_vel)
+            line_sim.run()
+            line_sim_input = line_sim.get_stamped_input()
+            line_sim_output = line_sim.get_stamped_output()
+            kalman_sim = KalmanSimulator(line_sim_input, line_sim_output)
+            kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k)
+            return kalman_sim
+
+    def get_line_adaptive_kalman_simulation(self, time=None, peak_vel=None):
+        if not time or not peak_vel:
+            raise ValueError
+        else:
+            line_sim = LineSimulator(time, peak_vel)
+            line_sim.run()
+            line_sim_input = line_sim.get_stamped_input()
+            line_sim_output = line_sim.get_stamped_output()
+            adaptive_kalman_sim = AdaptiveKalmanSimulator(line_sim_input, line_sim_output)
+            adaptive_kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
+            return adaptive_kalman_sim
+
+    def get_octagon_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None):
+        if not time or not peak_vel or not peak_turn:
+            raise ValueError
+        else:
+            octagon_sim = OctagonSimulator(30, 0.14, 3.)
+            octagon_sim.run()
+            octagon_sim_input = octagon_sim.get_stamped_input()
+            octagon_sim_output = octagon_sim.get_stamped_output()
+            kalman_sim = KalmanSimulator(octagon_sim_input, octagon_sim_output)
+            kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k)
+            return kalman_sim
+
+    def get_octagon_adaptive_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None):
+        if not time or not peak_vel or not peak_turn:
+            raise ValueError
+        else:
+            octagon_sim = OctagonSimulator(30, 0.14, 3.)
+            octagon_sim.run()
+            octagon_sim_input = octagon_sim.get_stamped_input()
+            octagon_sim_output = octagon_sim.get_stamped_output()
+            kalman_sim = AdaptiveKalmanSimulator(octagon_sim_input, octagon_sim_output)
+            kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
+            return kalman_sim
+
     def run_ekf_transforms(self, input_bags=[], output_folder=None):
         if not input_bags or not output_folder:
             raise ValueError
@@ -395,5 +469,20 @@ if __name__ == '__main__':
     beta_multi_ekf_exp = thesis.get_ekf_experiment(beta_multi_ekf_bag)
     legend = ["multi adapt", "EKF"]
     thesis.run_compare([beta_multi_adapt_exp, beta_multi_ekf_exp], betas_slice, legend)
+
+    sim_time = 30
+    peak_vel = 0.14
+    peak_turn = np.pi/2
+    line_kalman_sim = thesis.get_line_kalman_simulation(sim_time, peak_vel)
+    line_adaptive_kalman_sim = thesis.get_line_adaptive_kalman_simulation(sim_time, peak_vel)
+    legend=["no adapt", "adapt"]
+    line_slice=(0, np.inf)
+    thesis.run_compare([line_kalman_sim, line_adaptive_kalman_sim], line_slice, legend)
+
+    octagon_kalman_sim = thesis.get_octagon_kalman_simulation(sim_time, peak_vel, peak_turn)
+    octagon_adaptive_kalman_sim = thesis.get_octagon_adaptive_kalman_simulation(sim_time, peak_vel, peak_turn)
+    legend=["no adapt", "adapt"]
+    octagon_slice=(0, np.inf)
+    thesis.run_compare([octagon_kalman_sim, octagon_adaptive_kalman_sim], octagon_slice, legend)
 
     plt.show()
