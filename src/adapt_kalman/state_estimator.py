@@ -14,10 +14,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from itertools import compress
+
 import numpy as np
 from scipy import signal
 
 from kalman_filter import KalmanFilter, AdaptiveKalmanFilter
+
+
+class BagSystemIO(object):
+
+    def __init__(self):
+        self._input_mask = [1, 0, 0, 0, 0, 1]
+        self._output_mask = [1, 0, 0, 0, 0, 1]
+        self._state_mask = [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1]
+
+    def get_input(self, stamped_input=None):
+        if not stamped_input:
+            raise ValueError
+        else:
+            return self._filter(stamped_input, self._input_mask)
+
+    def get_output(self, stamped_output=None):
+        if not stamped_output:
+            raise ValueError
+        else:
+            return self._filter(stamped_output, self._output_mask)
+
+    def get_states(self, stamped_states=None):
+        if not stamped_states:
+            raise ValueError
+        else:
+            return self._filter(stamped_states, self._state_mask)
+
+    @staticmethod
+    def _filter(stamped_points=None, mask=None):
+        if not stamped_points or not mask:
+            raise ValueError
+        else:
+            time, points = zip(*stamped_points)
+            mask = np.array(mask, dtype=bool)
+            filtered_stamped_points = []
+            for t, point in zip(time, points):
+                filtered_stamped_points.append((t, tuple(compress(point, mask))))
+            return filtered_stamped_points
 
 
 class StateEstimator(object):
@@ -42,7 +82,7 @@ class StateEstimator(object):
         return self._stamped_Q
 
     def set_stamped_states(self, stamped_states=None):
-        if stamped_states is None:
+        if not stamped_states:
             raise ValueError
         else:
             new_stamped_states = []
@@ -54,14 +94,14 @@ class StateEstimator(object):
             self._stamped_states = new_stamped_states
 
     def set_stamped_input(self, stamped_input=None):
-        if stamped_input is None:
+        if not stamped_input:
             raise ValueError
         else:
             self._stamped_input = stamped_input
             self._add_time_from_input()
 
     def set_stamped_output(self, stamped_output=None):
-        if stamped_output is None:
+        if not stamped_output:
             raise ValueError
         else:
             self._stamped_output = stamped_output
@@ -69,7 +109,7 @@ class StateEstimator(object):
 
     @staticmethod
     def _v_state_form(state=None):
-        if state is None:
+        if not state:
             raise ValueError
         else:
             x, y, psi, xdot, ydot, psidot = state
@@ -78,7 +118,7 @@ class StateEstimator(object):
 
     @staticmethod
     def _psi_state_limit(state=None):
-        if state is None:
+        if not state:
             raise ValueError
         else:
             x, y, v, psi, dpsi = state
@@ -91,7 +131,7 @@ class StateEstimator(object):
 
     @staticmethod
     def _order_state(state=None):
-        if state is None:
+        if not state:
             raise ValueError
         else:
             x, y, psi, v, dpsi = state
@@ -110,7 +150,7 @@ class KalmanStateEstimator(StateEstimator):
 
     def __init__(self, kalman_filter=None):
         if not isinstance(kalman_filter, KalmanFilter):
-            raise AttributeError
+            raise ValueError
         else:
             super(KalmanStateEstimator, self).__init__()
             self._kalman_filter = kalman_filter
@@ -152,7 +192,7 @@ class KalmanStateEstimator(StateEstimator):
             self._stamped_Q = stamped_Q
 
 
-class StatePlotHandler(object):
+class StatePlotter(object):
     def __init__(self, state_estimator=None):
         if not isinstance(state_estimator, StateEstimator):
             raise ValueError
@@ -212,6 +252,17 @@ class StatePlotHandler(object):
             plot_states_t.append(t)
         return plot_states_t, plot_states
 
+    def get_x0x1_plot(self):
+        plot_x0_state = []
+        plot_x1_state = []
+        slices_stamped_states = self._slice_data(self._state_estimator.get_stamped_states())
+        for states_stamped in slices_stamped_states:
+            t, states = states_stamped
+            x0, x1, x2, x3, x4 = states
+            plot_x0_state.append(x0)
+            plot_x1_state.append(x1)
+        return plot_x0_state, [plot_x1_state]
+
     def get_Q_plot(self):
         plot_Q = []
         plot_t = []
@@ -261,6 +312,8 @@ class StatePlotHandler(object):
                    delimiter=' ', newline='\n')
         np.savetxt("../../data/{}x4{}.csv".format(pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
                    delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}x0x1{}.csv".format(pre, post), np.transpose([x0, x1]), header='t x0x1', comments='# ',
+                   delimiter=' ', newline='\n')
 
     def export_Q(self, pre="", post=""):
         t, Q = self.get_Q_plot()
@@ -276,7 +329,7 @@ class StatePlotHandler(object):
         return output
 
     def _slice_data(self, stamped_data=None):
-        if stamped_data is None:
+        if not stamped_data:
             raise ValueError
         else:
             t_list = []
@@ -293,7 +346,7 @@ class StatePlotHandler(object):
             return new_points
 
     def _find_slice(self, t_array=None):
-        if t_array is None:
+        if not t_array:
             raise ValueError
         else:
             start_index = 0
@@ -308,7 +361,7 @@ class StatePlotHandler(object):
 
     @staticmethod
     def _set_zero_time(start_index=0, t_array=None):
-        if start_index is None or t_array is None:
+        if not start_index and start_index != 0 or not t_array:
             raise ValueError
         else:
             new_t_array = []

@@ -14,17 +14,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kalman_filter import KalmanFilter, AdaptiveKalmanFilter
-from moving_weighted_window import MovingWeightedWindow, MovingWeightedExpWindow, MovingWeightedSigWindow
-from state_estimator import StateEstimator, KalmanStateEstimator, StatePlotHandler
-from bag_system_io import BagSystemIO
-from bag_reader import BagReader
-from system_io_simulator import LineSimulator, OctagonSimulator
-from bag_generator import EKFGenerator, IMUTransformGenerator
-from shell import *
+import os.path
 
 import numpy as np
 from matplotlib import pyplot as plt
+
+from kalman_filter import KalmanFilter, AdaptiveKalmanFilter
+from moving_weighted_window import MovingWeightedWindow, MovingWeightedExpWindow, MovingWeightedSigWindow
+from state_estimator import BagSystemIO, StateEstimator, KalmanStateEstimator, StatePlotter
+from bag_reader import BagReader
+from system_io_simulator import LineSimulator, OctagonSimulator
+from bag_generator import EKFGenerator, IMUTransformGenerator
+
+
+def check_file(bag=None):
+    if not os.path.isfile(bag) and not os.access(bag, os.R_OK):
+        raise ValueError
+    else:
+        return True
+
+
+def check_directory(dir=None):
+    if not dir:
+        raise ValueError
+    elif not os.path.exists(dir):
+        os.makedirs(dir)
+        print("Created directory " + dir)
+    else:
+        return True
 
 
 class Experiment(object):
@@ -42,7 +59,7 @@ class Experiment(object):
 
     @staticmethod
     def get_sys_input(bag=None, topic=None):
-        if bag is None or topic is None:
+        if not bag or not topic:
             raise ValueError
         else:
             bag_system_io = BagSystemIO()
@@ -52,7 +69,7 @@ class Experiment(object):
 
     @staticmethod
     def get_sys_output(bag=None, topic=None):
-        if bag is None or topic is None:
+        if not bag or not topic:
             raise ValueError
         else:
             bag_system_io = BagSystemIO()
@@ -62,7 +79,7 @@ class Experiment(object):
 
     @staticmethod
     def get_sys_states(bag=None, topic=None):
-        if bag is None or topic is None:
+        if not bag or not topic:
             raise ValueError
         else:
             bag_system_io = BagSystemIO()
@@ -72,11 +89,11 @@ class Experiment(object):
 
     @staticmethod
     def add_plot(stamped_plot=None, dimension=None, option=None, legend=None):
-        if stamped_plot is None or dimension is None:
+        if not stamped_plot or not dimension and dimension != 0:
             raise ValueError
         else:
             t, plot = stamped_plot
-            if option is None or legend is None:
+            if not option or not legend:
                 plt.plot(t, plot[dimension])
             else:
                 plt.plot(t, plot[dimension], option, label=legend)
@@ -84,15 +101,15 @@ class Experiment(object):
 
     @staticmethod
     def get_kalman_filter(alpha=None, beta=None, Q_k=None, R_k=None):
-        if alpha is None or beta is None or Q_k is None or R_k is None:
+        if not alpha or not beta or np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1:
             raise ValueError
         else:
             return [KalmanFilter(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k)]
 
     @staticmethod
     def get_adaptive_kalman_filter(alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
-        if alpha is None or beta is None or Q_k is None or R_k is None or \
-                not isinstance(window, MovingWeightedWindow) or M_k is None:
+        if not alpha or not beta or np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1 or \
+                not isinstance(window, MovingWeightedWindow) or np.count_nonzero(M_k) <= 1:
             raise ValueError
         else:
             return [AdaptiveKalmanFilter(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k, window=window, M_k=M_k)]
@@ -101,26 +118,26 @@ class Experiment(object):
         raise NotImplementedError
 
     def set_kalman_state_plots(self, kalman_filters=None, input=None, output=None):
-        if not isinstance(kalman_filters, list) or input is None or output is None:
+        if not isinstance(kalman_filters, list) or not input or not output:
             raise ValueError
         else:
             for kalman_filter in kalman_filters:
                 state_estimator = KalmanStateEstimator(kalman_filter)
                 state_estimator.set_stamped_input(input)
                 state_estimator.set_stamped_output(output)
-                plot_handler = StatePlotHandler(state_estimator)
+                plot_handler = StatePlotter(state_estimator)
                 plot_handler.set_slice_times(self.slice[0], self.slice[1])
                 self.state_plots.append(plot_handler)
 
     def set_state_plots(self, states=None, input=None, output=None):
-        if not isinstance(states, list) or input is None or output is None:
+        if not isinstance(states, list) or not input or not output:
             raise ValueError
         else:
             state_estimator = StateEstimator()
             state_estimator.set_stamped_input(input)
             state_estimator.set_stamped_output(output)
             state_estimator.set_stamped_states(states)
-            plot_handler = StatePlotHandler(state_estimator)
+            plot_handler = StatePlotter(state_estimator)
             plot_handler.set_slice_times(self.slice[0], self.slice[1])
             self.state_plots.append(plot_handler)
 
@@ -132,6 +149,7 @@ class Experiment(object):
         self.plot_input_figure(options, self.legends)
         self.plot_output_figure()
         self.plot_states_figure(options, self.legends)
+        self.plot_xy_state_figure(options, self.legends)
 
     def plot_input_figure(self, options=None, legends=None):
         self.add_figure()
@@ -162,6 +180,13 @@ class Experiment(object):
             for state_plot, option, legend in zip(self.state_plots, options, legends):
                 self.add_plot(state_plot.get_states_plot(), i, option, legend)
 
+    def plot_xy_state_figure(self,options=None, legends=None):
+        self.add_figure()
+        plt.xlabel("x")
+        plt.ylabel("y")
+        for state_plot, option, legend in zip(self.state_plots, options, legends):
+            self.add_plot(state_plot.get_x0x1_plot(), 0, option, legend)
+
     def export(self, pre=""):
         for state_plot in self.state_plots:
             state_plot.export_input(pre)
@@ -171,7 +196,7 @@ class Experiment(object):
 
 class KalmanExperiment(Experiment):
     def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=[]):
-        if bag is None or twist_topic is None or imu_topic is None:
+        if not bag or not twist_topic or not imu_topic:
             raise ValueError
         else:
             super(KalmanExperiment, self).__init__(slice, legends)
@@ -235,7 +260,7 @@ class AdaptiveKalmanExperiment(KalmanExperiment):
 class EKFExperiment(KalmanExperiment):
     def __init__(self, bag=None, odom_topic=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=[]):
         super(EKFExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
-        if odom_topic is None:
+        if not odom_topic:
             raise ValueError
         else:
             self.odom_topic = odom_topic
@@ -310,7 +335,7 @@ class ThesisDataExporter(object):
         self.odom_topic = "/odometry/filtered"
 
     def run_alphas(self, bag=None, alphas=[], slice=(0, np.inf)):
-        if not bag or not alphas:
+        if not check_file(bag) or not alphas:
             raise ValueError
         else:
             legend = [str(x) for x in alphas]
@@ -320,7 +345,7 @@ class ThesisDataExporter(object):
             return alphas_exp
 
     def run_betas(self, bag=None, betas=[], slice=(0, np.inf)):
-        if not bag or not betas:
+        if not check_file(bag) or not betas:
             raise ValueError
         else:
             legend = [str(x) for x in betas]
@@ -330,7 +355,7 @@ class ThesisDataExporter(object):
             return betas_exp
 
     def get_kalman_experiment(self, bag=None):
-        if not bag:
+        if not check_file(bag):
             raise ValueError
         else:
             kalman_experiment = KalmanExperiment(bag, self.twist_topic, self.imu_topic)
@@ -338,7 +363,7 @@ class ThesisDataExporter(object):
             return kalman_experiment
 
     def get_adaptive_kalman_experiment(self, bag=None):
-        if not bag:
+        if not check_file(bag):
             raise ValueError
         else:
             adaptive_kalman_experiment = AdaptiveKalmanExperiment(bag, self.twist_topic, self.imu_topic)
@@ -346,7 +371,7 @@ class ThesisDataExporter(object):
             return adaptive_kalman_experiment
 
     def get_ekf_experiment(self, bag=None):
-        if not bag:
+        if not check_file(bag):
             raise ValueError
         else:
             ekf_experiment = EKFExperiment(bag, self.odom_topic, self.twist_topic, self.imu_topic)
@@ -390,7 +415,7 @@ class ThesisDataExporter(object):
         if not time or not peak_vel or not peak_turn:
             raise ValueError
         else:
-            octagon_sim = OctagonSimulator(30, 0.14, 3.)
+            octagon_sim = OctagonSimulator(time, peak_vel, peak_turn)
             octagon_sim.run()
             octagon_sim_input = octagon_sim.get_stamped_input()
             octagon_sim_output = octagon_sim.get_stamped_output()
@@ -402,7 +427,7 @@ class ThesisDataExporter(object):
         if not time or not peak_vel or not peak_turn:
             raise ValueError
         else:
-            octagon_sim = OctagonSimulator(30, 0.14, 3.)
+            octagon_sim = OctagonSimulator(time, peak_vel, peak_turn)
             octagon_sim.run()
             octagon_sim_input = octagon_sim.get_stamped_input()
             octagon_sim_output = octagon_sim.get_stamped_output()
@@ -411,20 +436,27 @@ class ThesisDataExporter(object):
             return kalman_sim
 
     def run_ekf_transforms(self, input_bags=[], output_folder=None):
-        if not input_bags or not output_folder:
+        if not input_bags or not check_directory(output_folder):
             raise ValueError
         else:
             for bag in input_bags:
-                ekf_generator = EKFGenerator(bag, output_folder)
-                ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
+                if not check_file(bag):
+                    raise ValueError
+                else:
+                    ekf_generator = EKFGenerator(bag, output_folder)
+                    ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
 
-    def run_IMU_transforms(self, input_bags=[], output_folder=None):
-        if not input_bags or not output_folder:
+    @staticmethod
+    def run_IMU_transforms(input_bags=[], output_folder=None):
+        if not input_bags or check_directory(output_folder):
             raise ValueError
         else:
             for bag in input_bags:
-                imu_trans_generator = IMUTransformGenerator(bag, output_folder)
-                imu_trans_generator.generate()
+                if not check_file(bag):
+                    raise ValueError
+                else:
+                    imu_trans_generator = IMUTransformGenerator(bag, output_folder)
+                    imu_trans_generator.generate()
 
 
 if __name__ == '__main__':
@@ -472,17 +504,17 @@ if __name__ == '__main__':
 
     sim_time = 30
     peak_vel = 0.14
-    peak_turn = np.pi/2
+    peak_turn = np.pi / 2
     line_kalman_sim = thesis.get_line_kalman_simulation(sim_time, peak_vel)
     line_adaptive_kalman_sim = thesis.get_line_adaptive_kalman_simulation(sim_time, peak_vel)
-    legend=["no adapt", "adapt"]
-    line_slice=(0, np.inf)
+    legend = ["no adapt", "adapt"]
+    line_slice = (0, np.inf)
     thesis.run_compare([line_kalman_sim, line_adaptive_kalman_sim], line_slice, legend)
 
     octagon_kalman_sim = thesis.get_octagon_kalman_simulation(sim_time, peak_vel, peak_turn)
     octagon_adaptive_kalman_sim = thesis.get_octagon_adaptive_kalman_simulation(sim_time, peak_vel, peak_turn)
-    legend=["no adapt", "adapt"]
-    octagon_slice=(0, np.inf)
+    legend = ["no adapt", "adapt"]
+    octagon_slice = (0, np.inf)
     thesis.run_compare([octagon_kalman_sim, octagon_adaptive_kalman_sim], octagon_slice, legend)
 
     plt.show()

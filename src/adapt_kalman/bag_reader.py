@@ -16,18 +16,17 @@
 
 import tf
 import rosbag
-import numpy as np
 
 
 class BagReader(object):
     def __init__(self, bag_path=""):
-        if bag_path is None:
-            raise AttributeError
+        if not bag_path:
+            raise ValueError
         else:
             self.bag = rosbag.Bag(bag_path)
 
     def read_odom(self, topic=None):
-        if topic is None:
+        if not topic:
             raise ValueError
         else:
             odom_msgs = self.bag.read_messages(topics=topic)
@@ -59,8 +58,8 @@ class BagReader(object):
             return odom
 
     def read_imu(self, topic=None):
-        if topic is None:
-            raise AttributeError
+        if not topic:
+            raise ValueError
         else:
             imu = []
             imu_msgs = self.bag.read_messages(topics=topic)
@@ -79,7 +78,7 @@ class BagReader(object):
             return imu
 
     def read_twist(self, topic=None):
-        if topic is None:
+        if not topic:
             raise ValueError
         else:
             twist = []

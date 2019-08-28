@@ -15,15 +15,110 @@
 # limitations under the License.
 
 import numpy as np
-import sys
-np.set_printoptions(threshold=sys.maxsize)
-from simulator_tools import *
+
+
+def get_gauss(sigma=None, slice_tuple=None):
+    if not sigma:
+        raise ValueError
+    else:
+        N_gauss = 100
+        x = np.linspace(-1, 1, N_gauss)
+        gauss = np.exp(-(x / sigma) ** 2 / 2)
+        gauss = gauss / gauss.sum()  # normalize
+        if slice_tuple is not None:
+            for i in range(int(N_gauss * slice_tuple[0])-1):
+                gauss[i] = 0
+            for j in range(int(N_gauss * slice_tuple[1])):
+                gauss[-j] = 0
+        return gauss
+
+
+def get_moving_noise(array=None, peak=None, moving_threshold=None):
+    if array is None or not peak or not moving_threshold:
+        raise ValueError
+    else:
+        noise = []
+        for x in array:
+            if abs(x) > moving_threshold:
+                noise.append(np.random.normal(0, x * peak))
+            else:
+                noise.append(0)
+        return noise
+
+
+def get_zero_section_indexes(array=None):
+    if not array:
+        raise ValueError
+    else:
+        last_x = 1
+        pair = []
+        pairs=[]
+        for i in range(len(array)-1):
+            if array[i] == 0 and last_x != 0:
+                pair.append(i)
+            elif array[i] != 0 and last_x == 0:
+                pair.append(i)
+            if len(pair) == 2:
+                tuple_pair = (pair[0], pair[1])
+                pairs.append(tuple_pair)
+                pair.remove(pair[0])
+                pair.remove(pair[0])
+            last_x = array[i]
+        return pairs
+
+
+def get_sections_by_indexes(array=None, indexes=None):
+    if not array or not indexes:
+        raise ValueError
+    else:
+        sections = []
+        for index in indexes:
+            start, end = index
+            section = array[start:end]
+            sections.append(section)
+        return sections
+
+
+def set_sections_by_indexes(array=None, sections=None, indexes=None):
+    if array is None or sections is None or indexes is None:
+        raise ValueError
+    else:
+        for index, section in zip(indexes, sections):
+            start, end = index
+            for i in range(start, end-1):
+                array[i] = section[i-start]
+        return array
+
+
+def get_boxcar(array=None, high_percent=None, peak=None):
+    if not isinstance(array, list) or not high_percent or not peak:
+        raise ValueError
+    else:
+        start_index = int(len(array) * (1 - high_percent) / 2)
+        stop_index = int(start_index + len(array) * high_percent)
+        for i in range(len(array)-1):
+            if i < start_index or i > stop_index:
+                array[i] = 0
+            else:
+                array[i] = peak
+        return array
+
+
+def divide_into_sections(array=None, num_of_sections=None):
+    if not array or not num_of_sections:
+        raise ValueError
+    else:
+        N_section = len(array) / num_of_sections
+        sections = []
+        for i in range(num_of_sections):
+            sections.append(array[i * N_section:(i + 1) * N_section])
+        return sections
 
 
 class SystemIOSimulator(object):
 
     def __init__(self, time=None):
-        if time is None:
+        if not time:
             raise ValueError
         else:
             self._input = None
@@ -56,7 +151,7 @@ class SystemIOSimulator(object):
 class LineSimulator(SystemIOSimulator):
 
     def __init__(self, time=None, peak_vel=None):
-        if peak_vel is None:
+        if not time or not peak_vel:
             raise ValueError
         else:
             super(LineSimulator, self).__init__(time)
@@ -70,16 +165,13 @@ class LineSimulator(SystemIOSimulator):
 
     def _set_output(self):
         u0, _u1 = self._input
-
         gauss = get_gauss(0.01, self._time)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 50 * np.gradient(conv)
         moving_noise = get_moving_noise(u0, 1, 0.1)
-
         accel = 0
         accel += grad
         accel += moving_noise
-
         zeros = np.zeros(len(self._time))
         self._output = (accel, zeros)
 
@@ -87,7 +179,7 @@ class LineSimulator(SystemIOSimulator):
 class OctagonSimulator(SystemIOSimulator):
 
     def __init__(self, time=None, peak_vel=None, peak_turn=None):
-        if peak_vel is None or peak_turn is None:
+        if not peak_vel or not peak_turn:
             raise ValueError
         else:
             super(OctagonSimulator, self).__init__(time)
@@ -96,7 +188,7 @@ class OctagonSimulator(SystemIOSimulator):
 
     def _set_input(self):
         u0 = self._get_u0()
-        u1 = self._get_u1(u0)
+        u1 = self._get_u1()
         self._input = (u0, u1)
 
     def _get_u0(self):
@@ -108,19 +200,16 @@ class OctagonSimulator(SystemIOSimulator):
         u0 = np.concatenate(new_u0_sections).tolist()
         return u0
 
-    def _get_u1(self, u0=None):
-        if u0 is None:
-            return ValueError
-        else:
-            u0 = self._get_u0()
-            section_indexes = get_zero_section_indexes(u0)
-            sections = get_sections_by_indexes(u0, section_indexes)
-            new_sections = []
-            for section in sections:
-                new_sections.append(get_boxcar(section, 0.6, self._peak_turn))
-            u1 = np.zeros(len(self._time))
-            u1 = set_sections_by_indexes(u1, new_sections, section_indexes)
-            return u1
+    def _get_u1(self):
+        u0 = self._get_u0()
+        section_indexes = get_zero_section_indexes(u0)
+        sections = get_sections_by_indexes(u0, section_indexes)
+        new_sections = []
+        for section in sections:
+            new_sections.append(get_boxcar(section, 0.6, self._peak_turn))
+        u1 = np.zeros(len(self._time))
+        u1 = set_sections_by_indexes(u1, new_sections, section_indexes)
+        return u1
 
     def _set_output(self):
         y0 = self._get_y0()
@@ -138,7 +227,7 @@ class OctagonSimulator(SystemIOSimulator):
 
     def _get_y1(self):
         gauss = get_gauss(0.1, (3/7., 3/7.))
-        u1 = self._get_u1(self._get_u0())
+        u1 = self._get_u1()
         conv = np.convolve(u1, gauss, mode="same")
         noise = get_moving_noise(conv, 1, 0.1)
         return conv + noise
