@@ -165,10 +165,10 @@ class LineSimulator(SystemIOSimulator):
 
     def _set_output(self):
         u0, _u1 = self._input
-        gauss = get_gauss(0.01, self._time)
+        gauss = get_gauss(0.05, self._time)
         conv = np.convolve(u0, gauss, mode="same")
-        grad = 50 * np.gradient(conv)
-        moving_noise = get_moving_noise(u0, 1, 0.1)
+        grad = 30 * np.gradient(conv)
+        moving_noise = get_moving_noise(u0, 0.3, 0.01)
         accel = 0
         accel += grad
         accel += moving_noise

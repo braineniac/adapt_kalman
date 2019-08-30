@@ -35,12 +35,10 @@ class MovingWeightedWindow(object):
         return self._size
 
     def set_window(self, array=None):
-        if not array:
+        if array is None:
             raise ValueError
         else:
-            window = []
-            for i in range(self._size):
-                window.append(array[-i - 1])
+            window = [a*b for a, b in zip(array, self._weights)]
             self._window = window
 
     def get_window(self):
@@ -51,11 +49,18 @@ class MovingWeightedExpWindow(MovingWeightedWindow):
 
     def __init__(self, size):
         super(MovingWeightedExpWindow, self).__init__(size)
+        self._set_weights()
 
     def get_avg(self):
         series = pd.Series(np.flip(self._window))
         ewm = series.ewm(com=self._size / 2).mean().values
         return ewm[-1]
+
+    def _set_weights(self):
+        x = np.linspace(0, 1, self._size)
+        series = pd.Series(x)
+        ewm = series.ewm(com=self._size / 2).mean()
+        self._weights = np.array(ewm.values)[::-1]
 
 
 class MovingWeightedSigWindow(MovingWeightedWindow):

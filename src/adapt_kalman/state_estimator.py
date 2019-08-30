@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from itertools import compress
+from itertools import compress, chain
 
 import numpy as np
 from scipy import signal
@@ -118,7 +118,7 @@ class StateEstimator(object):
 
     @staticmethod
     def _psi_state_limit(state=None):
-        if not state:
+        if state is None:
             raise ValueError
         else:
             x, y, v, psi, dpsi = state
@@ -185,6 +185,7 @@ class KalmanStateEstimator(StateEstimator):
                         y_index += 1
                 self._kalman_filter.filter_iter((t, u, y))
                 states = self._kalman_filter.get_post_states()
+                states = list(chain(*states))
                 states = self._psi_state_limit(states)
                 stamped_states.append((t, states))
                 stamped_Q.append((t, self._kalman_filter.get_Q()))
@@ -261,16 +262,18 @@ class StatePlotter(object):
             x0, x1, x2, x3, x4 = states
             plot_x0_state.append(x0)
             plot_x1_state.append(x1)
-        return plot_x0_state, [plot_x1_state]
+        return plot_x0_state, plot_x1_state
 
     def get_Q_plot(self):
-        plot_Q = []
+        plot_Q0 = []
+        plot_Q1 = []
         plot_t = []
         for stamped_Q in self._state_estimator.get_stamped_Q():
             t, Q = stamped_Q
-            plot_Q.append(Q)
+            plot_Q0.append(Q[0][0])
+            plot_Q1.append(Q[1][1])
             plot_t.append(t)
-        return plot_t, plot_Q
+        return plot_t, (plot_Q0, plot_Q1)
 
     def set_slice_times(self, start=0, end=np.inf):
         if start > end:
@@ -312,12 +315,18 @@ class StatePlotter(object):
                    delimiter=' ', newline='\n')
         np.savetxt("../../data/{}x4{}.csv".format(pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}x0x1{}.csv".format(pre, post), np.transpose([x0, x1]), header='t x0x1', comments='# ',
+
+    def export_x0x1(self, pre="", post=""):
+        x0, x1 = self.get_x0x1_plot()
+        np.savetxt("../../data/{}x0x1{}.csv".format(pre, post), np.transpose([x0, x1]), header='x0 x1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_Q(self, pre="", post=""):
         t, Q = self.get_Q_plot()
-        np.savetxt("../../data/{}Q{}.csv".format(pre, post), np.transpose([t, Q]), header='t Q', comments='# ',
+        Q0, Q1 = Q
+        np.savetxt("../../data/{}Q0{}.csv".format(pre, post), np.transpose([t, Q0]), header='t Q0', comments='# ',
+                   delimiter=' ', newline='\n')
+        np.savetxt("../../data/{}Q1{}.csv".format(pre, post), np.transpose([t, Q1]), header='t Q1', comments='# ',
                    delimiter=' ', newline='\n')
 
     @staticmethod
