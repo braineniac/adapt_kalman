@@ -368,27 +368,27 @@ class ThesisDataExporter(object):
             betas_exp.plot()
             return betas_exp
 
-    def get_kalman_experiment(self, bag=None):
+    def get_kalman_experiment(self, bag=None, slice=(0, np.inf)):
         if not check_file(bag):
             raise ValueError
         else:
-            kalman_experiment = KalmanExperiment(bag, self.twist_topic, self.imu_topic)
+            kalman_experiment = KalmanExperiment(bag, self.twist_topic, self.imu_topic, slice)
             kalman_experiment.run(self.alpha, self.beta, self.Q_k, self.R_k)
             return kalman_experiment
 
-    def get_adaptive_kalman_experiment(self, bag=None):
+    def get_adaptive_kalman_experiment(self, bag=None, slice=(0, np.inf)):
         if not check_file(bag):
             raise ValueError
         else:
-            adaptive_kalman_experiment = AdaptiveKalmanExperiment(bag, self.twist_topic, self.imu_topic)
+            adaptive_kalman_experiment = AdaptiveKalmanExperiment(bag, self.twist_topic, self.imu_topic, slice)
             adaptive_kalman_experiment.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
             return adaptive_kalman_experiment
 
-    def get_ekf_experiment(self, bag=None):
+    def get_ekf_experiment(self, bag=None,slice=(0, np.inf)):
         if not check_file(bag):
             raise ValueError
         else:
-            ekf_experiment = EKFExperiment(bag, self.odom_topic, self.twist_topic, self.imu_topic)
+            ekf_experiment = EKFExperiment(bag, self.odom_topic, self.twist_topic, self.imu_topic, slice)
             ekf_experiment.run()
             return ekf_experiment
 
@@ -401,7 +401,7 @@ class ThesisDataExporter(object):
             compare.run()
             compare.plot()
 
-    def get_line_kalman_simulation(self, time=None, peak_vel=None):
+    def get_line_kalman_simulation(self, time=None, peak_vel=None, slice=(0,np.inf), legend=[]):
         if not time or not peak_vel:
             raise ValueError
         else:
@@ -409,11 +409,11 @@ class ThesisDataExporter(object):
             line_sim.run()
             line_sim_input = line_sim.get_stamped_input()
             line_sim_output = line_sim.get_stamped_output()
-            kalman_sim = KalmanSimulator(line_sim_input, line_sim_output)
+            kalman_sim = KalmanSimulator(line_sim_input, line_sim_output, slice, legend)
             kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k)
             return kalman_sim
 
-    def get_line_adaptive_kalman_simulation(self, time=None, peak_vel=None):
+    def get_line_adaptive_kalman_simulation(self, time=None, peak_vel=None, slice=(0,np.inf), legend=[]):
         if not time or not peak_vel:
             raise ValueError
         else:
@@ -421,11 +421,11 @@ class ThesisDataExporter(object):
             line_sim.run()
             line_sim_input = line_sim.get_stamped_input()
             line_sim_output = line_sim.get_stamped_output()
-            adaptive_kalman_sim = AdaptiveKalmanSimulator(line_sim_input, line_sim_output)
+            adaptive_kalman_sim = AdaptiveKalmanSimulator(line_sim_input, line_sim_output, slice, legend)
             adaptive_kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
             return adaptive_kalman_sim
 
-    def get_octagon_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None):
+    def get_octagon_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None,slice=(0,np.inf), legend=[]):
         if not time or not peak_vel or not peak_turn:
             raise ValueError
         else:
@@ -433,7 +433,7 @@ class ThesisDataExporter(object):
             octagon_sim.run()
             octagon_sim_input = octagon_sim.get_stamped_input()
             octagon_sim_output = octagon_sim.get_stamped_output()
-            kalman_sim = KalmanSimulator(octagon_sim_input, octagon_sim_output)
+            kalman_sim = KalmanSimulator(octagon_sim_input, octagon_sim_output, slice,legend)
             kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k)
             return kalman_sim
 
@@ -487,58 +487,58 @@ if __name__ == '__main__':
     #thesis.run_betas(betas_bag, betas, betas_slice)
 
     alphas_multi_bag = "/home/dan/ws/rosbag/garry3/5m_m.bag"
-    alphas_single_exp = thesis.get_kalman_experiment(alphas_bag)
-    alphas_single_exp.export("alphas_")
-    alphas_multi_exp = thesis.get_kalman_experiment(alphas_multi_bag)
-    alphas_multi_exp.export("alphas_multi_")
+    #alphas_single_exp = thesis.get_kalman_experiment(alphas_bag)
+    #alphas_single_exp.export("alphas_")
+    #alphas_multi_exp = thesis.get_kalman_experiment(alphas_multi_bag)
+    #alphas_multi_exp.export("alphas_multi_")
     legend = ["single", "multi"]
     #thesis.run_compare([alphas_single_exp, alphas_multi_exp], alphas_slice, legend)
 
     betas_multi_bag = "/home/dan/ws/rosbag/garry3/5turns_m.bag"
-    betas_single_exp = thesis.get_kalman_experiment(betas_bag)
-    betas_single_exp.export("betas_")
-    betas_multi_exp = thesis.get_kalman_experiment(betas_multi_bag)
-    betas_multi_exp.export("betas_multi_")
+    #betas_single_exp = thesis.get_kalman_experiment(betas_bag)
+    #betas_single_exp.export("betas_")
+    #betas_multi_exp = thesis.get_kalman_experiment(betas_multi_bag)
+    #betas_multi_exp.export("betas_multi_")
     legend = ["single", "multi"]
     #thesis.run_compare([betas_single_exp, betas_multi_exp], betas_slice, legend)
 
-    alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(alphas_multi_bag)
-    alpha_multi_adapt_exp.export("alpha_multi_adapt_")
+    #alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(alphas_multi_bag)
+    #alpha_multi_adapt_exp.export("alpha_multi_adapt_")
     legend = ["single", "multi adapt"]
     #thesis.run_compare([alphas_single_exp, alpha_multi_adapt_exp], alphas_slice, legend)
 
-    beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(betas_bag)
-    beta_multi_adapt_exp.export("beta_multi_adapt_")
+    #beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(betas_bag)
+    #beta_multi_adapt_exp.export("beta_multi_adapt_")
     legend = ["single", "multi adapt"]
     #thesis.run_compare([betas_single_exp, beta_multi_adapt_exp], betas_slice, legend)
 
     alpha_multi_ekf_bag = "/home/dan/ws/rosbag/garry3/ekf_5m_m.bag"
-    alpha_multi_ekf_exp = thesis.get_ekf_experiment(alpha_multi_ekf_bag)
-    alpha_multi_ekf_exp.export("alpha_ekf_multi_")
+    #alpha_multi_ekf_exp = thesis.get_ekf_experiment(alpha_multi_ekf_bag)
+    #alpha_multi_ekf_exp.export("alpha_ekf_multi_")
     legend = ["multi adapt", "EKF"]
     #thesis.run_compare([alpha_multi_adapt_exp, alpha_multi_ekf_exp], alphas_slice, legend)
 
     beta_multi_ekf_bag = "/home/dan/ws/rosbag/garry3/ekf_5turns_m.bag"
-    beta_multi_ekf_exp = thesis.get_ekf_experiment(beta_multi_ekf_bag)
-    beta_multi_ekf_exp.export("beta_multi_ekf_")
+    #beta_multi_ekf_exp = thesis.get_ekf_experiment(beta_multi_ekf_bag)
+    #beta_multi_ekf_exp.export("beta_multi_ekf_")
     legend = ["multi adapt", "EKF"]
     #thesis.run_compare([beta_multi_adapt_exp, beta_multi_ekf_exp], betas_slice, legend)
 
     sim_time = 10
     peak_vel = 0.14
     peak_turn = np.pi / 2
-    line_kalman_sim = thesis.get_line_kalman_simulation(sim_time, peak_vel)
+    line_slice = (0, 13)
+    line_kalman_sim = thesis.get_line_kalman_simulation(sim_time, peak_vel, line_slice)
     line_kalman_sim.export("sim_line_")
-    line_adaptive_kalman_sim = thesis.get_line_adaptive_kalman_simulation(sim_time, peak_vel)
+    line_adaptive_kalman_sim = thesis.get_line_adaptive_kalman_simulation(sim_time, peak_vel, line_slice)
     line_adaptive_kalman_sim.export("sim_line_adaptive_")
     legend = ["no adapt", "adapt"]
-    line_slice = (0, np.inf)
     thesis.run_compare([line_kalman_sim, line_adaptive_kalman_sim], line_slice, legend)
 
-    octagon_kalman_sim = thesis.get_octagon_kalman_simulation(sim_time, peak_vel, peak_turn)
-    octagon_kalman_sim.export("sim_octagon_")
-    octagon_adaptive_kalman_sim = thesis.get_octagon_adaptive_kalman_simulation(sim_time, peak_vel, peak_turn)
-    octagon_adaptive_kalman_sim.export("sim_octagon_adaptive_")
+    #octagon_kalman_sim = thesis.get_octagon_kalman_simulation(sim_time, peak_vel, peak_turn)
+    #octagon_kalman_sim.export("sim_octagon_")
+    #octagon_adaptive_kalman_sim = thesis.get_octagon_adaptive_kalman_simulation(sim_time, peak_vel, peak_turn)
+    #octagon_adaptive_kalman_sim.export("sim_octagon_adaptive_")
     legend = ["no adapt", "adapt"]
     octagon_slice = (0, np.inf)
     #thesis.run_compare([octagon_kalman_sim, octagon_adaptive_kalman_sim], octagon_slice, legend)

@@ -188,7 +188,8 @@ class KalmanStateEstimator(StateEstimator):
                 states = list(chain(*states))
                 states = self._psi_state_limit(states)
                 stamped_states.append((t, states))
-                stamped_Q.append((t, self._kalman_filter.get_Q()))
+                Q = self._kalman_filter.get_Q()
+                stamped_Q.append((t, (Q[0][0], Q[1][1])))
             self._stamped_states = stamped_states
             self._stamped_Q = stamped_Q
 
@@ -268,12 +269,15 @@ class StatePlotter(object):
         plot_Q0 = []
         plot_Q1 = []
         plot_t = []
-        for stamped_Q in self._state_estimator.get_stamped_Q():
-            t, Q = stamped_Q
-            plot_Q0.append(Q[0][0])
-            plot_Q1.append(Q[1][1])
-            plot_t.append(t)
-        return plot_t, (plot_Q0, plot_Q1)
+        if self._state_estimator.get_stamped_Q():
+            sliced_Q = self._slice_data(self._state_estimator.get_stamped_Q())
+            for stamped_Q in sliced_Q:
+                t, Q = stamped_Q
+                Q0, Q1 = Q
+                plot_Q0.append(Q0)
+                plot_Q1.append(Q1)
+                plot_t.append(t)
+            return plot_t, (plot_Q0, plot_Q1)
 
     def set_slice_times(self, start=0, end=np.inf):
         if start > end:
@@ -281,10 +285,6 @@ class StatePlotter(object):
         else:
             self._start_slice = start
             self._end_slice = end
-
-    def get_Q(self):
-        stamped_Q = self._state_estimator.get_stamped_Q()
-        return self._slice_data(stamped_Q)
 
     def export_output(self, pre="", post=""):
         t, y = self.get_output_plot()
@@ -322,11 +322,12 @@ class StatePlotter(object):
                    delimiter=' ', newline='\n')
 
     def export_Q(self, pre="", post=""):
-        t, Q = self.get_Q_plot()
-        Q0, Q1 = Q
-        np.savetxt("../../data/{}Q0{}.csv".format(pre, post), np.transpose([t, Q0]), header='t Q0', comments='# ',
+        if self.get_Q_plot():
+            t, Q = self.get_Q_plot()
+            Q0, Q1 = Q
+            np.savetxt("../../data/{}Q0{}.csv".format(pre, post), np.transpose([t, Q0]), header='t Q0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}Q1{}.csv".format(pre, post), np.transpose([t, Q1]), header='t Q1', comments='# ',
+            np.savetxt("../../data/{}Q1{}.csv".format(pre, post), np.transpose([t, Q1]), header='t Q1', comments='# ',
                    delimiter=' ', newline='\n')
 
     @staticmethod
@@ -347,6 +348,7 @@ class StatePlotter(object):
                 t_list.append(t)
                 data_list.append(data)
             t_list = self._set_zero_time(0, t_list)
+            t_list, data_list = self._extend_slice(t_list, data_list)
             start, end = self._find_slice(t_list)
             t_list = self._set_zero_time(start, t_list)
             new_points = []
@@ -354,18 +356,26 @@ class StatePlotter(object):
                 new_points.append((t, data))
             return new_points
 
+    def _extend_slice(self, t_list=None, data_list=None):
+        if not isinstance(t_list, list) or data_list is None:
+            raise ValueError
+        else:
+            if t_list[-1] < self._end_slice != np.inf:
+                t_list.append(self._end_slice)
+                data_list.append(data_list[-1])
+            return t_list, data_list
+
     def _find_slice(self, t_array=None):
         if not t_array:
             raise ValueError
         else:
             start_index = 0
-            end_index = -1
+            end_index = 0
             for t in t_array:
                 if t <= self._end_slice:
                     end_index += 1
                 if t < self._start_slice:
                     start_index += 1
-            end_index = end_index - len(t_array)
             return start_index, end_index
 
     @staticmethod
