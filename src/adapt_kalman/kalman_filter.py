@@ -83,7 +83,7 @@ class KalmanFilter(object):
             self._setup_next_iter()
 
     def get_post_states(self):
-        return tuple(self._X_k_post)
+        return self._X_k_post
 
     def get_Q(self):
         return tuple(self._Q_k)
@@ -146,22 +146,37 @@ class AdaptiveKalmanFilter(KalmanFilter):
             self._M_k = M_k
             self._Lambda_k = np.identity(2)
             self._Ro_k = self._Q_k.dot(np.linalg.inv(self._R_k))
-            self._u_buffer = deque([], self._window.get_size())
+            self._du_buffer = [deque([], self._window.get_size()),deque([], self._window.get_size())]
+            self._last_u = (0, 0)
 
     def filter_iter(self, tuy=(None, None, None)):
         t, u, y = tuy
-        self._u_buffer.append(u)
+        self._du_buffer[0].append(abs(u[0] - self._last_u[0]))
+        self._du_buffer[1].append(abs(u[1] - self._last_u[1]))
+        self._last_u = u
         self._adapt_covariance()
         super(AdaptiveKalmanFilter, self).filter_iter(tuy)
 
+    @staticmethod
+    def sum_du_w(du_buffer=None, w_k=None):
+        sum = 0
+        du_buffer = np.array(du_buffer)[::-1]
+        for du, Q in zip(du_buffer, w_k):
+            sum += du * Q
+        return sum
+
     def _adapt_covariance(self):
-        if len(self._u_buffer) >= self._window.get_size():
-            w_k = self._get_windowed_input()
+        if len(self._du_buffer[0]) >= self._window.get_size():
+            ones = np.ones(self._window.get_size())
+            self._window.set_window(ones)
+            w_k = self._window.get_window()
             self._Lambda_k = np.identity(2)
-            if w_k[0] != 0.0:
-                self._Lambda_k[0][0] = self._M_k[0][0] * abs(self._u_buffer[0][-1]) / abs(w_k[0])
-            if w_k[1] != 0.0:
-                self._Lambda_k[1][1] = self._M_k[1][1] * abs(self._u_buffer[1][-1]) / abs(w_k[1])
+            if np.max(self._du_buffer[0]) != 0.0:
+                self._Lambda_k[0][0] = 1 + self._M_k[0][0] / np.max(self._du_buffer[0]) * \
+                                       self.sum_du_w(self._du_buffer[0], w_k)
+            if np.max(self._du_buffer[1]) != 0.0:
+                self._Lambda_k[1][1] = 1 + self._M_k[1][1] / np.max(self._du_buffer[1]) * \
+                                       self.sum_du_w(self._du_buffer[1], w_k)
         self._Q_k = self._Lambda_k.dot(self._Ro_k).dot(self._R_k)
 
     def _get_windowed_input(self):
