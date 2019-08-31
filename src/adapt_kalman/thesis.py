@@ -28,10 +28,12 @@ from bag_generator import EKFGenerator, IMUTransformGenerator
 
 
 def check_file(bag=None):
-    if not os.path.isfile(bag) and not os.access(bag, os.R_OK):
-        raise ValueError
-    else:
+    if os.path.isfile(bag):
+        if not os.access(bag, os.R_OK):
+            raise ValueError
         return True
+    else:
+        return False
 
 
 def check_directory(dir=None):
@@ -40,8 +42,7 @@ def check_directory(dir=None):
     elif not os.path.exists(dir):
         os.makedirs(dir)
         print("Created directory " + dir)
-    else:
-        return True
+    return True
 
 
 class Experiment(object):
@@ -348,35 +349,51 @@ class ThesisDataExporter(object):
         self.M_k[1][1] = 1
 
         self.twist_topic = "/fake_encoder/twist"
-        self.imu_topic = "/imu"
+        self.imu_topic = "/imu_out/data"
+        self.twist_ekf_topic = "/fake_encoder/twist_var"
+        self.imu_ekf_topic = "/imu/var"
         self.odom_topic = "/odometry/filtered"
 
-        self.alphas_bag = "/home/dan/ws/rosbag/garry3/5m_slow.bag"
+        self.output = "/home/dan/ws/rosbag/garry3/"
+        self.out_trans = self.output + "trans/"
+        self.out_ekf = self.output + "ekf/"
+
+        self.alphas_bag = "5m_slow.bag"
+        self.betas_bag = "5turns.bag"
+        self.alphas_multi_bag = "5m_m.bag"
+        self.betas_multi_bag = "5turns_m.bag"
+
         self.alphas = [0.8, 0.9, 1, 1.1, 1.2]
-        self.alphas_slice = [0, 32]
-
-        self.betas_bag = "/home/dan/ws/rosbag/garry3/5turns.bag"
         self.betas = [0.8, 0.9, 1, 1.1, 1.2]
+
+        self.alphas_slice = [0, 32]
         self.betas_slice = [0, 30]
+        self.line_slice = (0, 13)
+        self.octagon_slice = (0, np.inf)
 
-        self.alphas_multi_bag = "/home/dan/ws/rosbag/garry3/5m_m.bag"
         self.legend_multi = ["single", "multi"]
-
-        self.betas_multi_bag = "/home/dan/ws/rosbag/garry3/5turns_m.bag"
-
         self.legend_adapt = ["single", "multi adapt"]
-
-        self.alpha_multi_ekf_bag = "/home/dan/ws/rosbag/garry3/ekf_5m_m.bag"
-        self.beta_multi_ekf_bag = "/home/dan/ws/rosbag/garry3/ekf_5turns_m.bag"
         self.legend_ekf = ["EKF", "multi adapt"]
+        self.legend_sim = ["no adapt", "adapt"]
 
         self.line_sim_time = 10
         self.octagon_sim_time = 30
         self.peak_vel = 0.14
         self.peak_turn = np.pi / 2
-        self.line_slice = (0, 13)
-        self.octagon_slice = (0, np.inf)
-        self.legend_sim = ["no adapt", "adapt"]
+
+    def transform_all_ekf(self):
+        bags = [
+            self.output + self.alphas_multi_bag,
+            self.output + self.betas_multi_bag]
+        self.run_ekf_transforms(bags, self.out_ekf)
+
+    def transform_all_IMU(self):
+        bags = [
+            self.output + self.alphas_bag,
+            self.output + self.betas_bag,
+            self.output + self.alphas_multi_bag,
+            self.output + self.betas_multi_bag]
+        self.run_IMU_transforms(bags, self.out_trans)
 
     def export_all(self):
         self.export_alphas()
@@ -391,46 +408,46 @@ class ThesisDataExporter(object):
         self.export_octagon_sim()
 
     def export_alphas(self):
-        thesis.run_alphas(self.alphas_bag, self.alphas, self.alphas_slice)
+        thesis.run_alphas(self.out_trans + "trans_" + self.alphas_bag, self.alphas, self.alphas_slice)
 
     def export_betas(self):
-        thesis.run_betas(self.betas_bag, self.betas, self.betas_slice)
+        thesis.run_betas(self.out_trans + "trans_" + self.betas_bag, self.betas, self.betas_slice)
 
     def export_alphas_multi(self):
-        alphas_single_exp = thesis.get_kalman_experiment(self.alphas_bag, self.alphas_slice)
+        alphas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
         alphas_single_exp.export("alphas_")
-        alphas_multi_exp = thesis.get_kalman_experiment(self.alphas_multi_bag, self.alphas_slice)
+        alphas_multi_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
         alphas_multi_exp.export("alphas_multi_")
         self.run_compare([alphas_single_exp, alphas_multi_exp], self.alphas_slice, self.legend_multi)
 
     def export_betas_multi(self):
-        betas_single_exp = thesis.get_kalman_experiment(self.betas_bag, self.betas_slice)
+        betas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
         betas_single_exp.export("betas_")
-        betas_multi_exp = thesis.get_kalman_experiment(self.betas_multi_bag, self.betas_slice)
+        betas_multi_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_multi_bag, self.betas_slice)
         betas_multi_exp.export("betas_multi_")
         self.run_compare([betas_single_exp, betas_multi_exp], self.betas_slice, self.legend_multi)
 
     def export_alphas_adapt(self):
-        alphas_single_exp = thesis.get_kalman_experiment(self.alphas_bag, self.alphas_slice)
-        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.alphas_multi_bag, self.alphas_slice)
+        alphas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
         alpha_multi_adapt_exp.export("alpha_multi_adapt_")
         self.run_compare([alphas_single_exp, alpha_multi_adapt_exp], self.alphas_slice, self.legend_adapt)
 
     def export_betas_adapt(self):
-        betas_single_exp = thesis.get_kalman_experiment(self.betas_bag, self.betas_slice)
-        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.betas_bag, self.betas_slice)
+        betas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
         beta_multi_adapt_exp.export("beta_multi_adapt_")
         self.run_compare([betas_single_exp, beta_multi_adapt_exp], self.betas_slice, self.legend_adapt)
 
     def export_alphas_ekf(self):
-        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.alphas_multi_bag, self.alphas_slice)
-        alpha_multi_ekf_exp = thesis.get_ekf_experiment(self.alpha_multi_ekf_bag, self.alphas_slice)
+        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
+        alpha_multi_ekf_exp = thesis.get_ekf_experiment(self.out_ekf + "ekf_" + self.alphas_multi_bag, self.alphas_slice)
         alpha_multi_ekf_exp.export("alpha_ekf_multi_")
         self.run_compare([alpha_multi_adapt_exp, alpha_multi_ekf_exp], self.alphas_slice, self.legend_ekf)
 
     def export_betas_ekf(self):
-        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.betas_bag, self.betas_slice)
-        beta_multi_ekf_exp = thesis.get_ekf_experiment(self.beta_multi_ekf_bag, self.betas_slice)
+        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        beta_multi_ekf_exp = thesis.get_ekf_experiment(self.out_ekf + "ekf_" + self.betas_multi_bag, self.betas_slice)
         beta_multi_ekf_exp.export("beta_multi_ekf_")
         self.run_compare([beta_multi_adapt_exp, beta_multi_ekf_exp], self.betas_slice, self.legend_ekf)
 
@@ -452,7 +469,7 @@ class ThesisDataExporter(object):
         self.run_compare([octagon_kalman_sim, octagon_adaptive_kalman_sim], self.octagon_slice, self.legend_sim)
 
     def run_alphas(self, alphas_bag=None, alphas=None, slice=(0, np.inf)):
-        if not check_file(self.alphas_bag) or not alphas:
+        if not check_file(alphas_bag) or not alphas:
             raise ValueError
         else:
             legend = [str(x) for x in alphas]
@@ -491,7 +508,7 @@ class ThesisDataExporter(object):
         if not check_file(bag):
             raise ValueError
         else:
-            ekf_experiment = EKFExperiment(bag, self.odom_topic, self.twist_topic, self.imu_topic, slice)
+            ekf_experiment = EKFExperiment(bag, self.odom_topic, self.twist_ekf_topic, self.imu_ekf_topic, slice)
             ekf_experiment.run()
             return ekf_experiment
 
@@ -557,26 +574,22 @@ class ThesisDataExporter(object):
             raise ValueError
         else:
             for bag in input_bags:
-                if not check_file(bag):
-                    raise ValueError
-                else:
-                    ekf_generator = EKFGenerator(bag, output_folder)
-                    ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
+                ekf_generator = EKFGenerator(bag, output_folder)
+                ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
 
     @staticmethod
     def run_IMU_transforms(input_bags=[], output_folder=None):
-        if not input_bags or check_directory(output_folder):
+        if not input_bags or not check_directory(output_folder):
             raise ValueError
         else:
             for bag in input_bags:
-                if not check_file(bag):
-                    raise ValueError
-                else:
-                    imu_trans_generator = IMUTransformGenerator(bag, output_folder)
-                    imu_trans_generator.generate()
+                imu_trans_generator = IMUTransformGenerator(bag, output_folder)
+                imu_trans_generator.generate()
 
 
 if __name__ == '__main__':
     thesis = ThesisDataExporter()
+    thesis.transform_all_ekf()
+    thesis.transform_all_IMU()
     thesis.export_all()
     plt.show()
