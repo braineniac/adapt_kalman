@@ -14,12 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os.path
 from itertools import compress, chain
 
 import numpy as np
 from scipy import signal
 
 from kalman_filter import KalmanFilter, AdaptiveKalmanFilter
+
+
+def check_directory(dir=None):
+    if not dir:
+        raise ValueError
+    elif not os.path.exists(dir):
+        os.makedirs(dir)
+        print("Created directory " + dir)
+    return True
 
 
 class BagSystemIO(object):
@@ -88,7 +98,7 @@ class StateEstimator(object):
             new_stamped_states = []
             for stamp, states in stamped_states:
                 states = self._v_state_form(states)
-                states = self._order_state(states)
+                #states = self._order_state(states)
                 states = self._psi_state_limit(states)
                 new_stamped_states.append((stamp, states))
             self._stamped_states = new_stamped_states
@@ -97,8 +107,34 @@ class StateEstimator(object):
         if not stamped_input:
             raise ValueError
         else:
+            #stamped_input = self._fix_stamped_input(stamped_input)
             self._stamped_input = stamped_input
             self._add_time_from_input()
+
+    @staticmethod
+    def _fix_stamped_input(stamped_input=None):
+        if not stamped_input:
+            raise ValueError
+        else:
+            new_stamped_input = []
+            for stamp, input in stamped_input:
+                u0, u1 = input
+                u1 = -u1
+                new_stamped_input.append((stamp, (u0, u1)))
+            return new_stamped_input
+
+    def set_u1y1_zero(self):
+        new_stamped_input = []
+        new_stamped_output = []
+        if self._stamped_input and self._stamped_output:
+            for t,u in self._stamped_input:
+                u0, u1 = u
+                new_stamped_input.append((t, (u0, 0)))
+            for t,y in self._stamped_output:
+                y0, y1 = y
+                new_stamped_output.append((t, (y0, 0)))
+            self._stamped_input = new_stamped_input
+            self._stamped_output = new_stamped_output
 
     def set_stamped_output(self, stamped_output=None):
         if not stamped_output:
@@ -289,45 +325,54 @@ class StatePlotter(object):
     def export_output(self, pre="", post=""):
         t, y = self.get_output_plot()
         y0, y1 = y
-        np.savetxt("../../data/{}y0{}.csv".format(pre, post), np.transpose([t, y0]), header='t y0', comments='# ',
+        dir = "../../data/{}".format(pre)
+        np.savetxt("{}/{}y0{}.csv".format(dir, pre, post), np.transpose([t, y0]), header='t y0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}y1{}.csv".format(pre, post), np.transpose([t, y1]), header='t y1', comments='# ',
+        np.savetxt("{}/{}y1{}.csv".format(dir, pre, post), np.transpose([t, y1]), header='t y1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_input(self, pre="", post=""):
         t, u = self.get_input_plot()
         u0, u1 = u
-        np.savetxt("../../data/{}u0{}.csv".format(pre, post), np.transpose([t, u0]), header='t u0', comments='# ',
+        dir = "../../data/{}".format(pre)
+        check_directory(dir)
+        np.savetxt("{}/{}u0{}.csv".format(dir, pre, post), np.transpose([t, u0]), header='t u0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}u1{}.csv".format(pre, post), np.transpose([t, u1]), header='t u1', comments='# ',
+        np.savetxt("{}/{}u1{}.csv".format(dir, pre, post), np.transpose([t, u1]), header='t u1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_states(self, pre="", post=""):
         t, x = self.get_states_plot()
         x0, x1, x2, x3, x4 = x
-        np.savetxt("../../data/{}x0{}.csv".format(pre, post), np.transpose([t, x0]), header='t x0', comments='# ',
+        dir = "../../data/{}".format(pre)
+        check_directory(dir)
+        np.savetxt("{}/{}x0{}.csv".format(dir,pre, post), np.transpose([t, x0]), header='t x0', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}x1{}.csv".format(pre, post), np.transpose([t, x1]), header='t x1', comments='# ',
+        np.savetxt("{}/{}x1{}.csv".format(dir,pre, post), np.transpose([t, x1]), header='t x1', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}x2{}.csv".format(pre, post), np.transpose([t, x2]), header='t x2', comments='# ',
+        np.savetxt("{}/{}x2{}.csv".format(dir,pre, post), np.transpose([t, x2]), header='t x2', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}x3{}.csv".format(pre, post), np.transpose([t, x3]), header='t x3', comments='# ',
+        np.savetxt("{}/{}x3{}.csv".format(dir,pre, post), np.transpose([t, x3]), header='t x3', comments='# ',
                    delimiter=' ', newline='\n')
-        np.savetxt("../../data/{}x4{}.csv".format(pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
+        np.savetxt("{}/{}x4{}.csv".format(dir,pre, post), np.transpose([t, x4]), header='t x4', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_x0x1(self, pre="", post=""):
         x0, x1 = self.get_x0x1_plot()
-        np.savetxt("../../data/{}x0x1{}.csv".format(pre, post), np.transpose([x0, x1]), header='x0 x1', comments='# ',
+        dir = "../../data/{}".format(pre)
+        check_directory(dir)
+        np.savetxt("{}/{}x0x1{}.csv".format(dir,pre, post), np.transpose([x0, x1]), header='x0 x1', comments='# ',
                    delimiter=' ', newline='\n')
 
     def export_Q(self, pre="", post=""):
         if self.get_Q_plot():
             t, Q = self.get_Q_plot()
             Q0, Q1 = Q
-            np.savetxt("../../data/{}Q0{}.csv".format(pre, post), np.transpose([t, Q0]), header='t Q0', comments='# ',
+            dir = "../../data/{}".format(pre)
+            check_directory(dir)
+            np.savetxt("{}/{}Q0{}.csv".format(dir,pre, post), np.transpose([t, Q0]), header='t Q0', comments='# ',
                    delimiter=' ', newline='\n')
-            np.savetxt("../../data/{}Q1{}.csv".format(pre, post), np.transpose([t, Q1]), header='t Q1', comments='# ',
+            np.savetxt("{}/{}Q1{}.csv".format(dir,pre, post), np.transpose([t, Q1]), header='t Q1', comments='# ',
                    delimiter=' ', newline='\n')
 
     @staticmethod

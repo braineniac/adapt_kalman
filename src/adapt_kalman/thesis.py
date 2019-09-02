@@ -233,7 +233,25 @@ class KalmanExperiment(Experiment):
         self.set_kalman_state_plots(kalman_filters, input, output)
 
 
-class AlphasExperiment(KalmanExperiment):
+class AlphaExperiment(KalmanExperiment):
+    def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=[]):
+        super(AlphaExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
+
+    def set_kalman_state_plots(self, kalman_filters=None, input=None, output=None):
+        if not isinstance(kalman_filters, list) or not input or not output:
+            raise ValueError
+        else:
+            for kalman_filter in kalman_filters:
+                state_estimator = KalmanStateEstimator(kalman_filter)
+                state_estimator.set_stamped_input(input)
+                state_estimator.set_stamped_output(output)
+                state_estimator.set_u1y1_zero()
+                plot_handler = StatePlotter(state_estimator)
+                plot_handler.set_slice_times(self.slice[0], self.slice[1])
+                self.state_plots.append(plot_handler)
+
+
+class AlphasExperiment(AlphaExperiment):
     def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=[]):
         super(AlphasExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
 
@@ -260,10 +278,35 @@ class BetasExperiment(KalmanExperiment):
                 kalman_filters.append(self.get_kalman_filter(alpha=alpha, beta=b, Q_k=Q_k, R_k=R_k)[0])
             return kalman_filters
 
+class BetasRatiosExperiment(KalmanExperiment):
+
+    def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None):
+        if not isinstance(Q_k, list):
+            raise ValueError
+        else:
+            kalman_filters = []
+            for Q in Q_k:
+                kalman_filters.append(self.get_kalman_filter(alpha=alpha, beta=beta, Q_k=Q, R_k=R_k)[0])
+            return kalman_filters
+
 
 class AdaptiveKalmanExperiment(KalmanExperiment):
     def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=None):
         super(AdaptiveKalmanExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
+
+    def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
+        return self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
+
+    def run(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
+        kalman_filters = self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
+        input = self.get_sys_input(self.bag, self.twist_topic)
+        output = self.get_sys_output(self.bag, self.imu_topic)
+        self.set_kalman_state_plots(kalman_filters, input, output)
+
+
+class AdaptiveKalmanAlphaExperiment(AlphaExperiment):
+    def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=None):
+        super(AdaptiveKalmanAlphaExperiment, self).__init__(bag, twist_topic, imu_topic, slice, legends)
 
     def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
         return self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
@@ -332,20 +375,20 @@ class Compare(Experiment):
 class ThesisDataExporter(object):
 
     def __init__(self):
-        self.alpha = 1
-        self.beta = 1
-        self.r1 = 0.001
-        self.r2 = 1
+        self.alpha = 1.8
+        self.beta = 7.4
+        self.r1 = 0.005
+        self.r2 = 100
         self.R_k = np.zeros((2, 2))
         self.R_k[0][0] = 0.04
         self.R_k[1][1] = 0.02
         self.Q_k = np.zeros((2, 2))
-        self.Q_k[0][0] = self.R_k[0][0] * self.r1
-        self.Q_k[1][1] = self.R_k[1][1] * self.r2
+        self.Q_k[0][0] = self.R_k[0][0] * self.r1 * self.r1
+        self.Q_k[1][1] = self.R_k[1][1] * self.r2 * self.r1
 
         self.window = MovingWeightedExpWindow(10)
         self.M_k = np.zeros((2, 2))
-        self.M_k[0][0] = 5
+        self.M_k[0][0] = 100
         self.M_k[1][1] = 1
 
         self.twist_topic = "/fake_encoder/twist"
@@ -358,17 +401,23 @@ class ThesisDataExporter(object):
         self.out_trans = self.output + "trans/"
         self.out_ekf = self.output + "ekf/"
 
-        self.alphas_bag = "5m_slow.bag"
-        self.betas_bag = "5turns.bag"
-        self.alphas_multi_bag = "5m_m.bag"
-        self.betas_multi_bag = "5turns_m.bag"
+        self.alphas_single_bag = "5m_medium.bag"
+        self.betas_single_bag = "5turns.bag"
+        self.alphas_bag = "5m_m.bag"
+        self.betas_bag = "5turns_m.bag"
+        self.alphas_multi_bag = "10m.bag"
+        self.betas_multi_bag = "10turns.bag"
+        self.octagon_bag = "loops_5-6.bag"
+        self.floor_bag = "floor.bag"
 
-        self.alphas = [0.8, 0.9, 1, 1.1, 1.2]
-        self.betas = [0.8, 0.9, 1, 1.1, 1.2]
+        self.alphas = [1.6, 1.8, 2, 2.2, 2.5]
+        self.betas = [6.6, 7.0, 7.4, 7.8, 8.2]
+        self.beta_ratios = [0.01, 0.1, 1, 10, 100]
 
-        self.alphas_slice = [0, 32]
-        self.betas_slice = [0, 30]
-        self.line_slice = (0, 13)
+        self.alphas_slice = [9, 32]
+        self.alpha_multi_slice = []
+        self.betas_slice = [0, 50]
+        self.line_slice = (2, 8)
         self.octagon_slice = (0, np.inf)
 
         self.legend_multi = ["single", "multi"]
@@ -377,93 +426,137 @@ class ThesisDataExporter(object):
         self.legend_sim = ["no adapt", "adapt"]
 
         self.line_sim_time = 10
-        self.octagon_sim_time = 30
-        self.peak_vel = 0.14
-        self.peak_turn = np.pi / 2
+        self.octagon_sim_time = 21
+        self.peak_vel = 0.5
+        self.peak_turn = 1.7
 
     def transform_all_ekf(self):
         bags = [
-            self.output + self.alphas_multi_bag,
-            self.output + self.betas_multi_bag]
+            self.output + self.alphas_bag,
+            self.output + self.betas_bag,
+            self.output + self.octagon_bag,
+            self.output + self.floor_bag
+        ]
         self.run_ekf_transforms(bags, self.out_ekf)
 
     def transform_all_IMU(self):
         bags = [
+            self.output + self.alphas_single_bag,
+            self.output + self.betas_single_bag,
             self.output + self.alphas_bag,
             self.output + self.betas_bag,
             self.output + self.alphas_multi_bag,
-            self.output + self.betas_multi_bag]
+            self.output + self.betas_multi_bag,
+            self.output + self.octagon_bag,
+            self.output + self.floor_bag
+        ]
         self.run_IMU_transforms(bags, self.out_trans)
 
     def export_all(self):
-        self.export_alphas()
-        self.export_betas()
-        self.export_alphas_multi()
-        self.export_betas_multi()
-        self.export_alphas_adapt()
-        self.export_betas_adapt()
-        self.export_alphas_ekf()
-        self.export_betas_ekf()
-        self.export_line_sim()
+        #self.export_alphas()
+        #self.export_betas()
+        #self.export_beta_ratios()
+        #self.export_alphas_single()
+        #self.export_alphas_multi()
+        #self.export_betas_single()
+        #self.export_betas_multi()
+        #self.export_alphas_adapt()
+        #self.export_betas_adapt()
+        #self.export_alphas_ekf()
+        #self.export_betas_ekf()
+        #self.export_line_sim()
         self.export_octagon_sim()
+        #self.export_octagon()
+        #self.export_floor()
 
     def export_alphas(self):
-        thesis.run_alphas(self.out_trans + "trans_" + self.alphas_bag, self.alphas, self.alphas_slice)
+        self.run_alphas(self.out_trans + "trans_" + self.alphas_bag, self.alphas, self.alphas_slice)
 
     def export_betas(self):
-        thesis.run_betas(self.out_trans + "trans_" + self.betas_bag, self.betas, self.betas_slice)
+        self.run_betas(self.out_trans + "trans_" + self.betas_bag, self.betas, self.betas_slice)
+
+    def export_beta_ratios(self):
+        self.run_beta_ratios(self.out_trans + "trans_" + self.betas_bag, self.beta_ratios, self.betas_slice)
+
+    def export_alphas_single(self):
+        alphas_single_exp = self.get_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_single_bag, self.alphas_slice)
+        alphas_single_exp.export("alphas_single_")
+        alphas_exp = self.get_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alphas_exp.export("alphas_")
+        self.run_compare([alphas_single_exp, alphas_exp], self.alphas_slice, self.legend_multi)
 
     def export_alphas_multi(self):
-        alphas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
-        alphas_single_exp.export("alphas_")
-        alphas_multi_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
+        alphas_exp = self.get_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alphas_exp.export("alphas_")
+        alphas_multi_exp = self.get_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
         alphas_multi_exp.export("alphas_multi_")
-        self.run_compare([alphas_single_exp, alphas_multi_exp], self.alphas_slice, self.legend_multi)
+        self.run_compare([alphas_exp, alphas_multi_exp], self.alphas_slice, self.legend_multi)
+
+    def export_betas_single(self):
+        betas_single_exp = self.get_kalman_experiment(self.out_trans + "trans_" + self.betas_single_bag, self.betas_slice)
+        betas_single_exp.export("betas_single_")
+        betas_exp = self.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        betas_exp.export("betas_")
+        self.run_compare([betas_single_exp, betas_exp], self.betas_slice, self.legend_multi)
 
     def export_betas_multi(self):
-        betas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
-        betas_single_exp.export("betas_")
-        betas_multi_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_multi_bag, self.betas_slice)
+        betas_exp = self.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        betas_exp.export("betas_")
+        betas_multi_exp = self.get_kalman_experiment(self.out_trans + "trans_" + self.betas_multi_bag, self.betas_slice)
         betas_multi_exp.export("betas_multi_")
-        self.run_compare([betas_single_exp, betas_multi_exp], self.betas_slice, self.legend_multi)
+        self.run_compare([betas_exp, betas_multi_exp], self.betas_slice, self.legend_multi)
 
     def export_alphas_adapt(self):
-        alphas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
-        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
-        alpha_multi_adapt_exp.export("alpha_multi_adapt_")
-        self.run_compare([alphas_single_exp, alpha_multi_adapt_exp], self.alphas_slice, self.legend_adapt)
+        alphas_exp = thesis.get_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alpha_adapt_exp = self.get_adaptive_kalman_alpha_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alpha_adapt_exp.export("alpha_adapt_")
+        self.run_compare([alphas_exp, alpha_adapt_exp], self.alphas_slice, self.legend_adapt)
 
     def export_betas_adapt(self):
-        betas_single_exp = thesis.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
-        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
-        beta_multi_adapt_exp.export("beta_multi_adapt_")
-        self.run_compare([betas_single_exp, beta_multi_adapt_exp], self.betas_slice, self.legend_adapt)
+        betas_exp = self.get_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        beta_adapt_exp = self.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        beta_adapt_exp.export("beta_adapt_")
+        self.run_compare([betas_exp, beta_adapt_exp], self.betas_slice, self.legend_adapt)
+
+    def export_octagon(self):
+        octagon_adapt_exp = self.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.octagon_bag)
+        octagon_adapt_exp.export("octagon_adapt_")
+        octagon_ekf_exp = self.get_ekf_experiment(self.out_ekf + "ekf_" + self.octagon_bag)
+        octagon_ekf_exp.export("octagon_ekf_")
+        self.run_compare([octagon_ekf_exp,octagon_adapt_exp], (0, np.inf), self.legend_ekf)
+
+    def export_floor(self):
+        floor_adapt_exp = self.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.floor_bag)
+        floor_adapt_exp.export("floor_adapt_")
+        floor_ekf_exp = self.get_ekf_experiment(self.out_ekf + "ekf_" + self.floor_bag)
+        floor_ekf_exp.export("floor_exp_")
+        self.run_compare([floor_ekf_exp, floor_adapt_exp], (0, np.inf), self.legend_ekf)
 
     def export_alphas_ekf(self):
-        alpha_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.alphas_multi_bag, self.alphas_slice)
-        alpha_multi_ekf_exp = thesis.get_ekf_experiment(self.out_ekf + "ekf_" + self.alphas_multi_bag, self.alphas_slice)
-        alpha_multi_ekf_exp.export("alpha_ekf_multi_")
-        self.run_compare([alpha_multi_adapt_exp, alpha_multi_ekf_exp], self.alphas_slice, self.legend_ekf)
+        alpha_adapt_exp = self.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.alphas_bag, self.alphas_slice)
+        alpha_ekf_exp = self.get_ekf_experiment(self.out_ekf + "ekf_" + self.alphas_bag, self.alphas_slice)
+        alpha_ekf_exp.export("alpha_ekf_multi_")
+        self.run_compare([alpha_adapt_exp, alpha_ekf_exp], self.alphas_slice, self.legend_ekf)
 
     def export_betas_ekf(self):
-        beta_multi_adapt_exp = thesis.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
-        beta_multi_ekf_exp = thesis.get_ekf_experiment(self.out_ekf + "ekf_" + self.betas_multi_bag, self.betas_slice)
-        beta_multi_ekf_exp.export("beta_multi_ekf_")
-        self.run_compare([beta_multi_adapt_exp, beta_multi_ekf_exp], self.betas_slice, self.legend_ekf)
+        beta_adapt_exp = self.get_adaptive_kalman_experiment(self.out_trans + "trans_" + self.betas_bag, self.betas_slice)
+        beta_ekf_exp = self.get_ekf_experiment(self.out_ekf + "ekf_" + self.betas_bag, self.betas_slice)
+        beta_ekf_exp.export("beta_multi_ekf_")
+        self.run_compare([beta_adapt_exp, beta_ekf_exp], self.betas_slice, self.legend_ekf)
 
     def export_line_sim(self):
-        line_kalman_sim = thesis.get_line_kalman_simulation(self.line_sim_time, self.peak_vel, self.line_slice)
+        line_kalman_sim = self.get_line_kalman_simulation(self.line_sim_time, self.peak_vel, self.line_slice)
         line_kalman_sim.export("sim_line_")
-        line_adaptive_kalman_sim = thesis.get_line_adaptive_kalman_simulation(
+        line_adaptive_kalman_sim = self.get_line_adaptive_kalman_simulation(
             self.line_sim_time, self.peak_vel, self.line_slice)
         line_adaptive_kalman_sim.export("sim_line_adaptive_")
         self.run_compare([line_kalman_sim, line_adaptive_kalman_sim], self.line_slice, self.legend_sim)
 
     def export_octagon_sim(self):
-        octagon_kalman_sim = thesis.get_octagon_kalman_simulation(
+        octagon_kalman_sim = self.get_octagon_kalman_simulation(
             self.octagon_sim_time, self.peak_vel, self.peak_turn, self.octagon_slice)
         octagon_kalman_sim.export("sim_octagon_")
-        octagon_adaptive_kalman_sim = thesis.get_octagon_adaptive_kalman_simulation(
+        octagon_adaptive_kalman_sim = self.get_octagon_adaptive_kalman_simulation(
             self.octagon_sim_time, self.peak_vel, self.peak_turn, self.octagon_slice)
         octagon_adaptive_kalman_sim.export("sim_octagon_adaptive_")
         self.run_compare([octagon_kalman_sim, octagon_adaptive_kalman_sim], self.octagon_slice, self.legend_sim)
@@ -476,6 +569,7 @@ class ThesisDataExporter(object):
             alphas_exp = AlphasExperiment(alphas_bag, self.twist_topic, self.imu_topic, slice, legend)
             alphas_exp.run(alphas, self.beta, self.Q_k, self.R_k)
             alphas_exp.plot()
+            alphas_exp.export("alphas_")
             return alphas_exp
 
     def run_betas(self, betas_bag=None, betas=None, slice=(0, np.inf)):
@@ -486,7 +580,24 @@ class ThesisDataExporter(object):
             betas_exp = BetasExperiment(betas_bag, self.twist_topic, self.imu_topic, slice, legend)
             betas_exp.run(self.alpha, betas, self.Q_k, self.R_k)
             betas_exp.plot()
+            betas_exp.export("betas_")
             return betas_exp
+
+    def run_beta_ratios(self, betas_bag=None, ratios=None, slice=(0, np.inf)):
+        if not check_file(betas_bag) or not ratios:
+            raise ValueError
+        else:
+            legend = [str(x) for x in ratios]
+            Q_ks = []
+            for ratio in ratios:
+                Q_k = np.zeros((2, 2))
+                Q_k[0][0] = self.Q_k[0][0]
+                Q_k[1][1] = self.R_k[1][1] * ratio * ratio
+                Q_ks.append(Q_k)
+            beta_ratios_exp = BetasRatiosExperiment(betas_bag, self.twist_topic, self.imu_topic, slice, legend)
+            beta_ratios_exp.run(self.alpha, self.beta, Q_ks, self.R_k)
+            beta_ratios_exp.plot()
+            beta_ratios_exp.export("r2_ratios_")
 
     def get_kalman_experiment(self, bag=None, slice=(0, np.inf)):
         if not check_file(bag):
@@ -495,6 +606,22 @@ class ThesisDataExporter(object):
             kalman_experiment = KalmanExperiment(bag, self.twist_topic, self.imu_topic, slice)
             kalman_experiment.run(self.alpha, self.beta, self.Q_k, self.R_k)
             return kalman_experiment
+
+    def get_kalman_alpha_experiment(self, bag=None, slice=(0, np.inf)):
+        if not check_file(bag):
+            raise ValueError
+        else:
+            kalman_experiment = AlphaExperiment(bag, self.twist_topic, self.imu_topic, slice)
+            kalman_experiment.run(self.alpha, self.beta, self.Q_k, self.R_k)
+            return kalman_experiment
+
+    def get_adaptive_kalman_alpha_experiment(self, bag=None, slice=(0, np.inf)):
+        if not check_file(bag):
+            raise ValueError
+        else:
+            adaptive_kalman_experiment = AdaptiveKalmanAlphaExperiment(bag, self.twist_topic, self.imu_topic, slice)
+            adaptive_kalman_experiment.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
+            return adaptive_kalman_experiment
 
     def get_adaptive_kalman_experiment(self, bag=None, slice=(0, np.inf)):
         if not check_file(bag):
@@ -541,8 +668,9 @@ class ThesisDataExporter(object):
             line_sim.run()
             line_sim_input = line_sim.get_stamped_input()
             line_sim_output = line_sim.get_stamped_output()
+            window = MovingWeightedSigWindow(250)
             adaptive_kalman_sim = AdaptiveKalmanSimulator(line_sim_input, line_sim_output, slice, legend)
-            adaptive_kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
+            adaptive_kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, window, self.M_k)
             return adaptive_kalman_sim
 
     def get_octagon_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None, slice=(0, np.inf), legend=[]):
@@ -553,7 +681,7 @@ class ThesisDataExporter(object):
             octagon_sim.run()
             octagon_sim_input = octagon_sim.get_stamped_input()
             octagon_sim_output = octagon_sim.get_stamped_output()
-            kalman_sim = KalmanSimulator(octagon_sim_input, octagon_sim_output, slice,legend)
+            kalman_sim = KalmanSimulator(octagon_sim_input, octagon_sim_output, slice, legend)
             kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k)
             return kalman_sim
 
@@ -565,8 +693,9 @@ class ThesisDataExporter(object):
             octagon_sim.run()
             octagon_sim_input = octagon_sim.get_stamped_input()
             octagon_sim_output = octagon_sim.get_stamped_output()
+            window = MovingWeightedSigWindow(50)
             kalman_sim = AdaptiveKalmanSimulator(octagon_sim_input, octagon_sim_output, slice, legend)
-            kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, self.window, self.M_k)
+            kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, window, self.M_k)
             return kalman_sim
 
     def run_ekf_transforms(self, input_bags=[], output_folder=None):

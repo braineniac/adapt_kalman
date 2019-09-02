@@ -59,7 +59,7 @@ class MovingWeightedExpWindow(MovingWeightedWindow):
     def _set_weights(self):
         x = np.linspace(0, 1, self._size)
         series = pd.Series(x)
-        ewm = series.ewm(com=self._size / 2).mean()
+        ewm = series.ewm(halflife=self._size / 2).mean()
         self._weights = np.array(ewm.values)[::-1]
 
 

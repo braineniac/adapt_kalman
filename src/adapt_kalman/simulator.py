@@ -156,10 +156,11 @@ class LineSimulator(SystemIOSimulator):
         else:
             super(LineSimulator, self).__init__(time)
             self._peak_vel = peak_vel
+            self._time = tuple(np.linspace(0, time, time * 250))
 
     def _set_input(self):
         u0 = np.zeros(len(self._time)).tolist()
-        box_function = get_boxcar(u0, 0.8, self._peak_vel)
+        box_function = get_boxcar(u0, 0.4, self._peak_vel)
         zeros = np.zeros(len(self._time))
         self._input = (box_function, zeros)
 
@@ -168,7 +169,7 @@ class LineSimulator(SystemIOSimulator):
         gauss = get_gauss(0.05, self._time)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 30 * np.gradient(conv)
-        moving_noise = get_moving_noise(u0, 0.3, 0.01)
+        moving_noise = get_moving_noise(u0, 4, 0.01)
         accel = 0
         accel += grad
         accel += moving_noise
@@ -206,7 +207,7 @@ class OctagonSimulator(SystemIOSimulator):
         sections = get_sections_by_indexes(u0, section_indexes)
         new_sections = []
         for section in sections:
-            new_sections.append(get_boxcar(section, 0.6, self._peak_turn))
+            new_sections.append(get_boxcar(section, 0.4, self._peak_turn))
         u1 = np.zeros(len(self._time))
         u1 = set_sections_by_indexes(u1, new_sections, section_indexes)
         return u1
@@ -222,12 +223,12 @@ class OctagonSimulator(SystemIOSimulator):
         conv = np.convolve(u0, gauss, mode="same")
         grad = 20 * np.gradient(conv)
         noise_still = np.random.normal(0, 0.08, len(u0))
-        noise_moving = get_moving_noise(conv, 3, 0.1)
+        noise_moving = get_moving_noise(conv, 4, 0.1)
         return grad + noise_still + noise_moving
 
     def _get_y1(self):
         gauss = get_gauss(0.1, (3/7., 3/7.))
         u1 = self._get_u1()
         conv = np.convolve(u1, gauss, mode="same")
-        noise = get_moving_noise(conv, 1, 0.1)
+        noise = get_moving_noise(conv, 0.3, 0.1)
         return conv + noise
