@@ -123,7 +123,7 @@ class SystemIOSimulator(object):
         else:
             self._input = None
             self._output = None
-            self._time = tuple(np.linspace(0, time, time * 50))  # system output is 50Hz
+            self._time = np.linspace(0, time, time * 50)  # system output is 50Hz
 
     def run(self):
         self._set_input()
@@ -156,7 +156,6 @@ class LineSimulator(SystemIOSimulator):
         else:
             super(LineSimulator, self).__init__(time)
             self._peak_vel = peak_vel
-            self._time = tuple(np.linspace(0, time, time * 250))
 
     def _set_input(self):
         u0 = np.zeros(len(self._time)).tolist()
@@ -165,11 +164,12 @@ class LineSimulator(SystemIOSimulator):
         self._input = (box_function, zeros)
 
     def _set_output(self):
-        u0, _u1 = self._input
-        gauss = get_gauss(0.05, self._time)
+        u0 = np.zeros(len(self._time)).tolist()
+        u0 = get_boxcar(u0, 0.4, self._peak_vel)
+        gauss = get_gauss(0.01)
         conv = np.convolve(u0, gauss, mode="same")
-        grad = 30 * np.gradient(conv)
-        moving_noise = get_moving_noise(u0, 4, 0.01)
+        grad = 25 * np.gradient(conv)
+        moving_noise = get_moving_noise(u0, 5, 0.01)
         accel = 0
         accel += grad
         accel += moving_noise
