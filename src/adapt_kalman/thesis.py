@@ -377,11 +377,11 @@ class ThesisDataExporter(object):
     def __init__(self):
         self.alpha = 1.8
         self.beta = 7.4
-        self.r1 = 0.005
+        self.r1 = 0.01
         self.r2 = 10
         self.R_k = np.zeros((2, 2))
-        self.R_k[0][0] = 0.04
-        self.R_k[1][1] = 0.02
+        self.R_k[0][0] = 0.04 * 0.04
+        self.R_k[1][1] = 0.02 * 0.02
         self.Q_k = np.zeros((2, 2))
         self.Q_k[0][0] = self.R_k[0][0] * self.r1 * self.r1
         self.Q_k[1][1] = self.R_k[1][1] * self.r2 * self.r2
@@ -407,7 +407,7 @@ class ThesisDataExporter(object):
         self.betas_bag = "5turns_m.bag"
         self.alphas_multi_bag = "10m.bag"
         self.betas_multi_bag = "10turns.bag"
-        self.octagon_bag = "loops_5-6.bag"
+        self.octagon_bag = "loops_7-8.bag"
         self.floor_bag = "floor.bag"
 
         self.alphas = [1.6, 1.8, 2, 2.2, 2.4]
@@ -417,8 +417,8 @@ class ThesisDataExporter(object):
         self.alphas_slice = [9, 32]
         self.alpha_multi_slice = []
         self.betas_slice = [0, 50]
-        self.line_slice = (0, np.inf)
-        self.octagon_slice = (6.5, 12.5)
+        self.line_slice = (0.5, 1.5)
+        self.octagon_slice = (0, np.inf)
 
         self.legend_multi = ["single", "multi"]
         self.legend_adapt = ["reference","single", "multi"]
