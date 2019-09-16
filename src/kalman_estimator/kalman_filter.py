@@ -22,17 +22,16 @@ from moving_weighted_window import MovingWeightedWindow
 
 class KalmanFilter(object):
 
-    def __init__(self, Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
+    def __init__(self,
+                 Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
                  alpha=1, beta=1,
                  mass=1,
                  micro_theta=1, micro_eta=1,
                  x0=(0, 0, 0, 0, 0, 0, 0)):
-
         if np.count_nonzero(Q_k) < 2 or np.count_nonzero(R_k) < 2:
             raise ValueError("Q_k or R_k covariance underdefined!")
         if np.array(x0).shape != (7, 1):
             raise ValueError("Incorrect shape for x0!")
-
         self._alpha = alpha
         self._beta = beta
         self._mass = mass
@@ -149,20 +148,30 @@ class KalmanFilter(object):
 
 class AdaptiveKalmanFilter(KalmanFilter):
 
-    def __init__(self, Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
-                 alpha=1.0, beta=1.0,
+    def __init__(self,
+                 Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
+                 alpha=1, beta=1,
+                 mass=1,
+                 micro_theta=1, micro_eta=1,
                  window=None, M_k=np.zeros((2, 2)),
-                 x0=(0, 0, 0, 0, 0)):
+                 x0=(0, 0, 0, 0, 0, 0, 0)):
         if not isinstance(window, MovingWeightedWindow):
             raise ValueError("Window is not a MovingWeightedWindow object!")
         if np.count_nonzero(M_k) < 2:
             raise ValueError("M_k underdefined!")
-        super(AdaptiveKalmanFilter, self).__init__(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k, x0=x0)
+        super(AdaptiveKalmanFilter, self).__init__(
+            Q_k=Q_k, R_k=R_k,
+            alpha=alpha, beta=beta,
+            mass=mass,
+            micro_theta=micro_theta, micro_eta=micro_eta,
+            x0=x0)
         self._window = window
         self._M_k = M_k
         self._Lambda_k = np.identity(2)
         self._Ro_k = self._Q_k.dot(np.linalg.inv(self._R_k))
-        self._du_buffer = [deque([], self._window.get_size()),deque([], self._window.get_size())]
+        self._du_buffer = [
+            deque([], self._window.get_size()),
+            deque([], self._window.get_size())]
         self._last_u = (0, 0)
 
     def filter_iter(self, tuy=(None, None, None)):
