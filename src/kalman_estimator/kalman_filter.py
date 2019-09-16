@@ -46,9 +46,9 @@ class KalmanFilter(object):
         self._y_k = np.zeros((2, 1))  # Measurement Vector
         self._L_k = np.zeros((7, 2))  # Kalman Gain Matrix
 
-        self._X_k_pre = x0  # A Priori state vector
-        self._X_k_post = np.zeros((7, 1))  # A Posteriori state vector
-        self._X_k_extr = np.zeros((7, 1))  # Extrapolated state vector
+        self._x_k_pre = x0  # A Priori state vector
+        self._x_k_post = np.zeros((7, 1))  # A Posteriori state vector
+        self._x_k_extr = np.zeros((7, 1))  # Extrapolated state vector
 
         # A Priori Parameter Covariance Matrix
         self._P_k_pre = np.zeros((7, 7))
@@ -98,7 +98,7 @@ class KalmanFilter(object):
         self._setup_next_iter()
 
     def get_post_states(self):
-        return self._X_k_post
+        return self._x_k_post
 
     def get_Q(self):
         return tuple(self._Q_k)
@@ -106,12 +106,12 @@ class KalmanFilter(object):
     def _update_Phi_k(self):
         self._Phi_k = np.array([
             [1, 0,
-             self._dt * float(np.cos(self._X_k_post[3])),
-             0.5 * self._dt * self._dt * float(np.cos(self._X_k_post[3])),
+             self._dt * float(np.cos(self._x_k_post[3])),
+             0.5 * self._dt * self._dt * float(np.cos(self._x_k_post[3])),
              0, 0, 0],
             [1, 0,
-             self._dt * float(np.sin(self._X_k_post[3])),
-             0.5 * self._dt * self._dt * float(np.sin(self._X_k_post[3])),
+             self._dt * float(np.sin(self._x_k_post[3])),
+             0.5 * self._dt * self._dt * float(np.sin(self._x_k_post[3])),
              0, 0, 0],
             [0, 0, 1, self._dt, 0, 0, 0],
             [0, 0, - self._micro_theta / self._mass, 0, 0, 0, 0],
@@ -128,22 +128,22 @@ class KalmanFilter(object):
         ))
 
     def _update_states(self):
-        self._X_k_post = self._X_k_pre + self._L_k.dot(
-            self._y_k - self._C_k.dot(self._X_k_pre) - self._D_k.dot(self._u_k)
+        self._x_k_post = self._x_k_pre + self._L_k.dot(
+            self._y_k - self._C_k.dot(self._x_k_pre) - self._D_k.dot(self._u_k)
         )
 
     def _update_error_covars(self):
         self._P_k_post = (np.identity(7) - self._L_k.dot(self._C_k)).dot(self._P_k_pre)
 
     def _extr_states(self):
-        self._X_k_extr = self._Phi_k.dot(self._X_k_post) + self._Gamma_k.dot(self._u_k)
+        self._X_k_extr = self._Phi_k.dot(self._x_k_post) + self._Gamma_k.dot(self._u_k)
 
     def _extr_error_covars(self):
         self._P_k_extr = self._Phi_k.dot(self._P_k_post).dot(self._Phi_k.T) \
             + self._G_k.dot(self._Q_k).dot(self._G_k.T)
 
     def _setup_next_iter(self):
-        self._X_k_pre = self._X_k_extr
+        self._x_k_pre = self._x_k_extr
         self._P_k_pre = self._P_k_extr
 
 
