@@ -98,7 +98,6 @@ class StateEstimator(object):
             new_stamped_states = []
             for stamp, states in stamped_states:
                 states = self._v_state_form(states)
-                #states = self._order_state(states)
                 states = self._psi_state_limit(states)
                 new_stamped_states.append((stamp, states))
             self._stamped_states = new_stamped_states
@@ -107,21 +106,20 @@ class StateEstimator(object):
         if not stamped_input:
             raise ValueError
         else:
-            #stamped_input = self._fix_stamped_input(stamped_input)
             self._stamped_input = stamped_input
             self._add_time_from_input()
 
-    @staticmethod
-    def _fix_stamped_input(stamped_input=None):
-        if not stamped_input:
-            raise ValueError
-        else:
-            new_stamped_input = []
-            for stamp, input in stamped_input:
-                u0, u1 = input
-                u1 = -u1
-                new_stamped_input.append((stamp, (u0, u1)))
-            return new_stamped_input
+    # @staticmethod
+    # def _fix_stamped_input(stamped_input=None):
+    #     if not stamped_input:
+    #         raise ValueError
+    #     else:
+    #         new_stamped_input = []
+    #         for stamp, input in stamped_input:
+    #             u0, u1 = input
+    #             u1 = -u1
+    #             new_stamped_input.append((stamp, (u0, u1)))
+    #         return new_stamped_input
 
     def set_u1y1_zero(self):
         new_stamped_input = []

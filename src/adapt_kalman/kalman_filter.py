@@ -91,8 +91,8 @@ class KalmanFilter(object):
     def _update_matrices(self):
         if self._dt:
             self._Phi_k = np.array([
-                [1, 0, self._dt * np.cos(self._X_k_post[3]), 0, 0],
-                [0, 1, self._dt * np.sin(self._X_k_post[3]), 0, 0],
+                [1, 0, self._dt * float(np.cos(self._X_k_post[3])), 0, 0],
+                [0, 1, self._dt * float(np.sin(self._X_k_post[3])), 0, 0],
                 [0, 0, 0, 0, 0],
                 [0, 0, 0, 1, self._dt],
                 [0, 0, 0, 0, 0]

@@ -375,9 +375,9 @@ class Compare(Experiment):
 class ThesisDataExporter(object):
 
     def __init__(self):
-        self.alpha = 1.8
+        self.alpha = 1 #1.8
         self.beta = 7.4
-        self.r1 = 0.01
+        self.r1 = 0.1  #0.01
         self.r2 = 10
         self.R_k = np.zeros((2, 2))
         self.R_k[0][0] = 0.04 * 0.04
@@ -386,7 +386,7 @@ class ThesisDataExporter(object):
         self.Q_k[0][0] = self.R_k[0][0] * self.r1 * self.r1
         self.Q_k[1][1] = self.R_k[1][1] * self.r2 * self.r2
 
-        self.window = MovingWeightedExpWindow(10)
+        self.window = MovingWeightedExpWindow(50)
         self.M_k = np.zeros((2, 2))
         self.M_k[0][0] = 100
         self.M_k[1][1] = 1
@@ -417,7 +417,7 @@ class ThesisDataExporter(object):
         self.alphas_slice = [9, 32]
         self.alpha_multi_slice = []
         self.betas_slice = [0, 50]
-        self.line_slice = (0.5, 1.5)
+        self.line_slice = (0.5, np.inf)
         self.octagon_slice = (0, np.inf)
 
         self.legend_multi = ["single", "multi"]
@@ -427,7 +427,7 @@ class ThesisDataExporter(object):
 
         self.line_sim_time = 3
         self.octagon_sim_time = 50 #21
-        self.peak_vel = 0.35
+        self.peak_vel = 1 #0.35
         self.peak_turn = 1.7
 
     def transform_all_ekf(self):
@@ -457,21 +457,21 @@ class ThesisDataExporter(object):
         self.run_IMU_transforms(bags, self.out_trans)
 
     def export_all(self):
-        self.export_alphas()
-        self.export_betas()
-        self.export_betas_ratios()
-        self.export_alpha_single()
-        self.export_alpha_multi()
-        self.export_beta_single()
-        self.export_beta_multi()
-        self.export_alpha_adapt()
-        self.export_beta_adapt()
-        self.export_alpha_ekf()
-        self.export_beta_ekf()
-        #self.export_line_sim()
-        #self.export_octagon_sim()
-        self.export_octagon()
-        self.export_floor()
+        # self.export_alphas()
+        # self.export_betas()
+        # self.export_betas_ratios()
+        # self.export_alpha_single()
+        # self.export_alpha_multi()
+        # self.export_beta_single()
+        # self.export_beta_multi()
+        # self.export_alpha_adapt()
+        # self.export_beta_adapt()
+        # self.export_alpha_ekf()
+        # self.export_beta_ekf()
+        self.export_line_sim()
+        # self.export_octagon_sim()
+        # self.export_octagon()
+        # self.export_floor()
 
     def export_alphas(self):
         self.run_alphas(self.out_trans + "trans_" + self.alphas_bag, self.alphas, self.alphas_slice)
@@ -566,7 +566,7 @@ class ThesisDataExporter(object):
         line_adaptive_kalman_sim = self.get_line_adaptive_kalman_simulation(
             self.line_sim_time, self.peak_vel, self.line_slice)
         line_adaptive_kalman_sim.export("sim_line_adaptive_")
-        self.run_compare([line_kalman_sim, line_adaptive_kalman_sim], self.line_slice, self.legend_sim)
+        self.run_compare([line_kalman_sim], self.line_slice, self.legend_sim)
 
     def export_octagon_sim(self):
         octagon_kalman_sim = self.get_octagon_kalman_simulation(
@@ -736,4 +736,4 @@ if __name__ == '__main__':
     thesis.transform_all_IMU()
     thesis.transform_all_ekf()
     thesis.export_all()
-    #plt.show()
+    plt.show()
