@@ -15,76 +15,58 @@
 # limitations under the License.
 
 import numpy as np
-import pandas as pd
 
 
 class MovingWeightedWindow(object):
 
     def __init__(self, size=0):
-        if not size:
-            raise ValueError
-        else:
-            self._size = size
-            self._weights = []
-            self._window = []
+        if not size or not isinstance(size, int):
+            raise ValueError("Invalid window size!")
+        self._size = size
+        self._weights = self._set_weights()
 
-    def get_avg(self):
-        raise NotImplementedError
+    # def get_avg(self):
+    #     raise NotImplementedError
 
     def get_size(self):
         return self._size
 
-    def set_window(self, array=None):
-        if array is None:
-            raise ValueError
-        else:
-            window = [a*b for a, b in zip(array, self._weights)]
-            self._window = window
-
-    def get_window(self):
-        return self._window
-
-
-class MovingWeightedExpWindow(MovingWeightedWindow):
-
-    def __init__(self, size):
-        super(MovingWeightedExpWindow, self).__init__(size)
-        self._set_weights()
-
-    def get_avg(self):
-        series = pd.Series(np.flip(self._window))
-        ewm = series.ewm(com=self._size / 2).mean().values
-        return ewm[-1]
+    def get_weighted_sum(self, array=[]):
+        if not isinstance(array, list) or not isinstance(array, tuple):
+            raise ValueError("Input array is neither an array nor a tuple!")
+        if not array or not all(array):
+            raise ValueError("Input array is empty!")
+        sum = 0
+        for elem, weight in zip(array, self._weights):
+            sum += elem * weight
+        return sum
 
     def _set_weights(self):
-        x = np.linspace(0, 1, self._size)
-        series = pd.Series(x)
-        ewm = series.ewm(halflife=self._size / 2).mean()
-        self._weights = np.array(ewm.values)[::-1]
+        raise NotImplementedError
 
 
 class MovingWeightedSigWindow(MovingWeightedWindow):
 
     def __init__(self, size, alpha=10):
         super(MovingWeightedSigWindow, self).__init__(size)
+        if not isinstance(alpha, float) and not isinstance(alpha, int):
+            raise ValueError("Alpha must be float or int!")
         if not alpha:
-            raise ValueError
-        else:
-            self._alpha = alpha
-            self._set_weights()
+            raise ValueError("Alpha can't be zero!")
+        self._alpha = alpha
 
-    def get_avg(self):
-        y = np.zeros(self._size)
-        for i in range(self._size):
-            upper_sum = 0
-            for k in range(i + 1):
-                upper_sum += self._window[k] * self._weights[k]
-            y[i] = upper_sum / np.sum(self._weights[:i + 1])
-        return y[-1]
+    # def get_avg(self):
+    #     y = np.zeros(self._size)
+    #     for i in range(self._size):
+    #         upper_sum = 0
+    #         for k in range(i + 1):
+    #             upper_sum += self._window[k] * self._weights[k]
+    #         y[i] = upper_sum / np.sum(self._weights[:i + 1])
+    #     return y[-1]
 
     def _set_weights(self):
-        x = np.linspace(0, 1, self._size)
+        x = np.linspace(1, 0, self._size)
         w = np.zeros(self._size)
         for i in range(self._size):
             w[i] = 1 / (1 + np.exp(self._alpha * (x[i] - 0.5)))
-        self._weights = w
+        return w
