@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(adapt_kalman)
+project(kalman_estimator)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -9,6 +9,8 @@ project(adapt_kalman)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  geometry_msgs
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -151,6 +153,8 @@ include_directories(
 #############
 ## Install ##
 #############
+catkin_install_python(PROGRAMS  scripts/data_exporter.py
+                      DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # all install targets should use catkin DESTINATION variables
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
