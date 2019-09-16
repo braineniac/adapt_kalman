@@ -1,3 +1,0 @@
-<launch>
-    <node name="adapt_kalman_sim_node" pkg="adapt_kalman" type="adapt_kalman_sim_node.py" output="screen"/>
-</launch>
