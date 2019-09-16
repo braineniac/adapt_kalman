@@ -22,65 +22,70 @@ from moving_weighted_window import MovingWeightedWindow
 
 class KalmanFilter(object):
 
-    def __init__(self, Q_k=None, R_k=None, alpha=1., beta=1., x0=(0, 0, 0, 0, 0)):
-        if np.count_nonzero(Q_k) <= 1 or np.count_nonzero(R_k) <= 1:
-            raise ValueError
-        else:
-            self._alpha = alpha
-            self._beta = beta
+    def __init__(self, Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
+                 alpha=1., beta=1.,
+                 x0=(0, 0, 0, 0, 0)):
+        if np.count_nonzero(Q_k) < 2 or np.count_nonzero(R_k) < 2:
+            raise ValueError("Q_k or R_k covariance underdefined!")
+        if np.array(x0).shape != (5, 1):
+            raise ValueError("Incorrect shape for x0!")
 
-            self._R_k = R_k  # Observation Covariance Matrix
-            self._Q_k = Q_k  # Process Covariance Matrix
+        self._alpha = alpha
+        self._beta = beta
+        self._R_k = R_k  # Observation Covariance Matrix
+        self._Q_k = Q_k  # Process Covariance Matrix
+        self._x0 = x0  # Initial State Vector
 
-            self._u_k = np.zeros((2, 1))  # Input Vector
-            self._y_k = np.zeros((2, 1))  # Measurement Vector
-            self._L_k = np.zeros((5, 2))  # Kalman Gain Matrix
+        self._u_k = np.zeros((2, 1))  # Input Vector
+        self._y_k = np.zeros((2, 1))  # Measurement Vector
+        self._L_k = np.zeros((5, 2))  # Kalman Gain Matrix
 
-            x0_rad = list(x0)
-            x0_rad[3] = np.radians(x0[3])
-            x0 = np.array(x0_rad).reshape((5, 1))  # Initial State Vector
-            self._X_k_pre = x0  # A Priori state vector
-            self._X_k_post = np.zeros((5, 1))  # A Posteriori state vector
-            self._X_k_extr = np.zeros((5, 1))  # Extrapolated state vector
+        x0_rad = list(self._x0)
+        x0_rad[3] = np.radians(x0[3])
+        x0 = np.array(x0_rad).reshape((5, 1))  # Initial State Vector
+        self._X_k_pre = x0  # A Priori state vector
+        self._X_k_post = np.zeros((5, 1))  # A Posteriori state vector
+        self._X_k_extr = np.zeros((5, 1))  # Extrapolated state vector
 
-            self._P_k_pre = np.zeros((5, 5))  # A Priori Parameter Covariance Matrix
-            self._P_k_post = np.zeros((5, 5))  # A Posteriori Parameter Covariance Matrix
-            self._P_k_extr = np.zeros((5, 5))  # Extrapolated Parameter Covariance Matrix
+        self._P_k_pre = np.zeros((5, 5))  # A Priori Parameter Covariance Matrix
+        self._P_k_post = np.zeros((5, 5))  # A Posteriori Parameter Covariance Matrix
+        self._P_k_extr = np.zeros((5, 5))  # Extrapolated Parameter Covariance Matrix
 
-            self._Phi_k = np.zeros((5, 5))  # Dynamic Coefficient Matrix
-            self._Gamma_k = np.zeros((5, 2))  # Input Coupling Matrix
-            self._G_k = np.zeros((5, 2))  # Process Noise Input Coupling Matrix
-            self._G_k[2][0] = self._alpha
-            self._G_k[4][1] = self._beta
+        self._Phi_k = np.zeros((5, 5))  # Dynamic Coefficient Matrix
+        self._Gamma_k = np.zeros((5, 2))  # Input Coupling Matrix
+        self._G_k = np.zeros((5, 2))  # Process Noise Input Coupling Matrix
+        self._G_k[2][0] = self._alpha
+        self._G_k[4][1] = self._beta
 
-            self._C_k = np.zeros((2, 5))  # Measurement Sensitivity Matrix
-            self._D_k = np.zeros((2, 2))  # Output Coupling Matrix
-            self._H_k = np.zeros((2, 2))  # Process Noise Output Coupling Matrix
+        self._C_k = np.zeros((2, 5))  # Measurement Sensitivity Matrix
+        self._D_k = np.zeros((2, 2))  # Output Coupling Matrix
+        self._H_k = np.zeros((2, 2))  # Process Noise Output Coupling Matrix
 
-            self._dt = 0
-            self._t = 0
+        self._dt = 0
+        self._t = 0
 
     def filter_iter(self, tuy=(None, None, None)):
+        if not isinstance(tuy, tuple) and not isinstance(tuy, list):
+            raise ValueError("Iteration input is not a list or a tuple!")
+        if not any(tuy):
+            raise ValueError("Iteration input contains an empty element!")
         t, u, y = tuy
-        if not t and not u and not y:
-            raise ValueError
-        else:
-            self._dt = t - self._t
-            self._t = t
+        self._dt = t - self._t
+        self._t = t
 
-            self._u_k[0] = u[0]
-            self._u_k[1] = u[1]
-            self._y_k[0] = y[0]
-            self._y_k[1] = y[1]
+        self._u_k[0] = u[0]
+        self._u_k[1] = u[1]
+        self._y_k[0] = y[0]
+        self._y_k[1] = y[1]
 
-            # execute iteration steps
-            self._update_matrices()
-            self._set_gain()
-            self._update_states()
-            self._update_error_covars()
-            self._extr_states()
-            self._extr_error_covars()
-            self._setup_next_iter()
+        # execute iteration steps
+        self._update_matrices()
+        self._set_gain()
+        self._update_states()
+        self._update_error_covars()
+        self._extr_states()
+        self._extr_error_covars()
+        self._setup_next_iter()
 
     def get_post_states(self):
         return self._X_k_post
@@ -137,19 +142,27 @@ class KalmanFilter(object):
 
 class AdaptiveKalmanFilter(KalmanFilter):
 
-    def __init__(self, Q_k=None, R_k=None, alpha=1.0, beta=1.0, window=None, M_k=None, x0=(0, 0, 0, 0, 0)):
-        if not isinstance(window, MovingWeightedWindow) or np.count_nonzero(M_k) < 2:
-            raise ValueError
-        else:
-            super(AdaptiveKalmanFilter, self).__init__(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k, x0=x0)
-            self._window = window
-            self._M_k = M_k
-            self._Lambda_k = np.identity(2)
-            self._Ro_k = self._Q_k.dot(np.linalg.inv(self._R_k))
-            self._du_buffer = [deque([], self._window.get_size()),deque([], self._window.get_size())]
-            self._last_u = (0, 0)
+    def __init__(self, Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
+                 alpha=1.0, beta=1.0,
+                 window=None, M_k=np.zeros((2, 2)),
+                 x0=(0, 0, 0, 0, 0)):
+        if not isinstance(window, MovingWeightedWindow):
+            raise ValueError("Window is not a MovingWeightedWindow object!")
+        if np.count_nonzero(M_k) < 2:
+            raise ValueError("M_k underdefined!")
+        super(AdaptiveKalmanFilter, self).__init__(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k, x0=x0)
+        self._window = window
+        self._M_k = M_k
+        self._Lambda_k = np.identity(2)
+        self._Ro_k = self._Q_k.dot(np.linalg.inv(self._R_k))
+        self._du_buffer = [deque([], self._window.get_size()),deque([], self._window.get_size())]
+        self._last_u = (0, 0)
 
     def filter_iter(self, tuy=(None, None, None)):
+        if not isinstance(tuy, tuple) and not isinstance(tuy, list):
+            raise ValueError("Iteration input is not a list or a tuple!")
+        if not any(tuy):
+            raise ValueError("Iteration input contains an empty element!")
         t, u, y = tuy
         self._du_buffer[0].append(abs(u[0] - self._last_u[0]))
         self._du_buffer[1].append(abs(u[1] - self._last_u[1]))
@@ -158,7 +171,8 @@ class AdaptiveKalmanFilter(KalmanFilter):
         super(AdaptiveKalmanFilter, self).filter_iter(tuy)
 
     @staticmethod
-    def sum_du_w(du_buffer=None, w_k=None):
+    def sum_du_w(du_buffer=[], w_k=[]):
+        # TODO: cleanup function
         sum = 0
         du_buffer = np.array(du_buffer)[::-1]
         for du, Q in zip(du_buffer, w_k):
@@ -179,22 +193,22 @@ class AdaptiveKalmanFilter(KalmanFilter):
                                        self.sum_du_w(self._du_buffer[1], w_k)
         self._Q_k = self._Lambda_k.dot(self._Ro_k).dot(self._R_k)
 
-    def _get_windowed_input(self):
-        u_win = self._sort_input()
-        w_k = []
-        for j in range(len(u_win)):
-            w_k.append([])
-            self._window.set_window(u_win[j])
-            w_k[j] = self._window.get_avg()
-        return w_k
-
-    def _sort_input(self):
-        u_win = []
-        for u in self._u_buffer:
-            for i in range(len(u)):
-                try:
-                    u_win[i].append(u[i])
-                except IndexError:
-                    u_win.append([])
-                    u_win[i].append(u[i])
-        return u_win
+    # def _get_windowed_input(self):
+    #     u_win = self._sort_input()
+    #     w_k = []
+    #     for j in range(len(u_win)):
+    #         w_k.append([])
+    #         self._window.set_window(u_win[j])
+    #         w_k[j] = self._window.get_avg()
+    #     return w_k
+    #
+    # def _sort_input(self):
+    #     u_win = []
+    #     for u in self._u_buffer:
+    #         for i in range(len(u)):
+    #             try:
+    #                 u_win[i].append(u[i])
+    #             except IndexError:
+    #                 u_win.append([])
+    #                 u_win[i].append(u[i])
+    #     return u_win
