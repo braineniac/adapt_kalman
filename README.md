@@ -1,22 +1,25 @@
-# Adaptive Kalman Filter
+# Kalman Estimator
 
-This is an implementation of a Kalman Filter with adaptive covariance properties.
+This project estimates a robot's global x and y states and the robot relative v,a,psi,yaw,dyaw, ddyaw states using an IMU and a joystick signal with the help of a Kalman Filter.
 
-It is meant to be used with a twist msg as a velocity input and an imu msg which was recorded with rosbag on a robot running in a straight line.
 
 ## Requirements
 
 Clone this project with:
 ```
-$ git clone https://github.com/braineniac/adapt_kalman.git
+$ git clone https://github.com/braineniac/kalman_estimator.git
 ```
 
-- ROS installation
+### ROS
+kinetic or melodic
+
+### Python dependencies
 - matplotlib
 - numpy
 - pandas
+- scipy
 
-You can install these with:
+I would recommend creating a virtualenv, then you can install these with:
 ```
 $ pip install -r requirements.txt
 ```
@@ -24,16 +27,14 @@ $ pip install -r requirements.txt
 ## Compiling
 In your workspace run:
 ```
-$ catkin_make adapt_kalman
+$ catkin_make kalman_estimator
 ```
 
-## Use
+## Development
+This package is currently used as local data analysis package from rosbags and thesis generation.
 
-Check out the --help option with all scripts in the bin folder for details.
+It has a standard Kalman Filter and an Extended Kalman Filter with an adaptive process covariance with a window function.
 
-## TODO
-- extend to multiple types of message inputs
-- use multiple dimensions
 
 ## License
 
