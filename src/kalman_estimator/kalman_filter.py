@@ -40,9 +40,6 @@ class KalmanFilter(object):
         self._y_k = np.zeros((2, 1))  # Measurement Vector
         self._L_k = np.zeros((5, 2))  # Kalman Gain Matrix
 
-        x0_rad = list(self._x0)
-        x0_rad[3] = np.radians(x0[3])
-        x0 = np.array(x0_rad).reshape((5, 1))  # Initial State Vector
         self._X_k_pre = x0  # A Priori state vector
         self._X_k_post = np.zeros((5, 1))  # A Posteriori state vector
         self._X_k_extr = np.zeros((5, 1))  # Extrapolated state vector
