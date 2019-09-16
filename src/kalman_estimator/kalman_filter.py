@@ -186,25 +186,14 @@ class AdaptiveKalmanFilter(KalmanFilter):
         self._adapt_covariance()
         super(AdaptiveKalmanFilter, self).filter_iter(tuy)
 
-    @staticmethod
-    def sum_du_w(du_buffer=[], w_k=[]):
-        # TODO: cleanup function
-        sum = 0
-        du_buffer = np.array(du_buffer)[::-1]
-        for du, Q in zip(du_buffer, w_k):
-            sum += du * Q
-        return sum
-
     def _adapt_covariance(self):
         if len(self._du_buffer[0]) >= self._window.get_size():
-            ones = np.ones(self._window.get_size())
-            self._window.set_window(ones)
-            w_k = self._window.get_window()
-            self._Lambda_k = np.identity(2)
             if np.max(self._du_buffer[0]) != 0.0:
-                self._Lambda_k[0][0] = 1 + self._M_k[0][0] / np.max(self._du_buffer[0]) * \
-                                       self.sum_du_w(self._du_buffer[0], w_k)
+                self._Lambda_k[0][0] = 1 \
+                    + self._M_k[0][0] / np.max(self._du_buffer[0]) \
+                    * self._window.get_weighted_sum(self._du_buffer[0])
             if np.max(self._du_buffer[1]) != 0.0:
-                self._Lambda_k[1][1] = 1 + self._M_k[1][1] / np.max(self._du_buffer[1]) * \
-                                       self.sum_du_w(self._du_buffer[1], w_k)
+                self._Lambda_k[1][1] = 1 \
+                    + self._M_k[1][1] / np.max(self._du_buffer[1]) \
+                    * self._window.get_weighted_sum(self._du_buffer[0])
         self._Q_k = self._Lambda_k.dot(self._Ro_k).dot(self._R_k)
