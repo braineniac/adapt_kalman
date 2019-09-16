@@ -23,40 +23,53 @@ from moving_weighted_window import MovingWeightedWindow
 class KalmanFilter(object):
 
     def __init__(self, Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
-                 alpha=1., beta=1.,
-                 x0=(0, 0, 0, 0, 0)):
+                 alpha=1, beta=1,
+                 mass=1,
+                 micro_theta=1, micro_eta=1,
+                 x0=(0, 0, 0, 0, 0, 0, 0)):
+
         if np.count_nonzero(Q_k) < 2 or np.count_nonzero(R_k) < 2:
             raise ValueError("Q_k or R_k covariance underdefined!")
-        if np.array(x0).shape != (5, 1):
+        if np.array(x0).shape != (7, 1):
             raise ValueError("Incorrect shape for x0!")
 
         self._alpha = alpha
         self._beta = beta
+        self._mass = mass
+        self._micro_theta = micro_theta
+        self._micro_eta = micro_theta
         self._R_k = R_k  # Observation Covariance Matrix
         self._Q_k = Q_k  # Process Covariance Matrix
         self._x0 = x0  # Initial State Vector
 
         self._u_k = np.zeros((2, 1))  # Input Vector
         self._y_k = np.zeros((2, 1))  # Measurement Vector
-        self._L_k = np.zeros((5, 2))  # Kalman Gain Matrix
+        self._L_k = np.zeros((7, 2))  # Kalman Gain Matrix
 
         self._X_k_pre = x0  # A Priori state vector
-        self._X_k_post = np.zeros((5, 1))  # A Posteriori state vector
-        self._X_k_extr = np.zeros((5, 1))  # Extrapolated state vector
+        self._X_k_post = np.zeros((7, 1))  # A Posteriori state vector
+        self._X_k_extr = np.zeros((7, 1))  # Extrapolated state vector
 
-        self._P_k_pre = np.zeros((5, 5))  # A Priori Parameter Covariance Matrix
-        self._P_k_post = np.zeros((5, 5))  # A Posteriori Parameter Covariance Matrix
-        self._P_k_extr = np.zeros((5, 5))  # Extrapolated Parameter Covariance Matrix
+        # A Priori Parameter Covariance Matrix
+        self._P_k_pre = np.zeros((7, 7))
+        # A Posteriori Parameter Covariance Matrix
+        self._P_k_post = np.zeros((7, 7))
+        # Extrapolated Parameter Covariance Matrix
+        self._P_k_extr = np.zeros((7, 7))
 
-        self._Phi_k = np.zeros((5, 5))  # Dynamic Coefficient Matrix
-        self._Gamma_k = np.zeros((5, 2))  # Input Coupling Matrix
-        self._G_k = np.zeros((5, 2))  # Process Noise Input Coupling Matrix
-        self._G_k[2][0] = self._alpha
-        self._G_k[4][1] = self._beta
+        self._Phi_k = np.zeros((7, 7))  # Dynamic Coefficient Matrix
+        self._Gamma_k = np.zeros((7, 2))  # Input Coupling Matrix
+        self._Gamma_k[3][0] = self._alpha / self._mass
+        self._Gamma_k[7][1] = self._beta / self._mass
+        self._G_k = np.zeros((7, 2))  # Process Noise Input Coupling Matrix
+        self._G_k[3][0] = self._alpha / self._mass
+        self._G_k[7][1] = self._beta / self._mass
 
-        self._C_k = np.zeros((2, 5))  # Measurement Sensitivity Matrix
-        self._D_k = np.zeros((2, 2))  # Output Coupling Matrix
-        self._H_k = np.zeros((2, 2))  # Process Noise Output Coupling Matrix
+        self._C_k = np.zeros((2, 7))  # Measurement Sensitivity Matrix
+        self._C_k[3][0] = 1
+        self._C_k[5][1] = 1
+        self._D_k = np.zeros((2, 7))  # Output Coupling Matrix
+        self._H_k = np.zeros((2, 7))  # Process Noise Output Coupling Matrix
 
         self._dt = 0
         self._t = 0
@@ -76,7 +89,7 @@ class KalmanFilter(object):
         self._y_k[1] = y[1]
 
         # execute iteration steps
-        self._update_matrices()
+        self._update_Phi_k()
         self._set_gain()
         self._update_states()
         self._update_error_covars()
@@ -90,47 +103,44 @@ class KalmanFilter(object):
     def get_Q(self):
         return tuple(self._Q_k)
 
-    def _update_matrices(self):
-        if self._dt:
-            self._Phi_k = np.array([
-                [1, 0, self._dt * float(np.cos(self._X_k_post[3])), 0, 0],
-                [0, 1, self._dt * float(np.sin(self._X_k_post[3])), 0, 0],
-                [0, 0, 0, 0, 0],
-                [0, 0, 0, 1, self._dt],
-                [0, 0, 0, 0, 0]
-            ])
-            self._Gamma_k = np.array([
-                [0, 0],
-                [0, 0],
-                [self._alpha, 0],
-                [0, 0],
-                [0, self._beta]
-            ])
-            self._C_k = np.array([
-                [0, 0, -1 / self._dt, 0, 0],
-                [0, 0, 0, 0, 1]
-            ])
-            self._D_k = np.array([
-                [self._alpha / self._dt, 0],
-                [0, 0]
-            ])
+    def _update_Phi_k(self):
+        self._Phi_k = np.array([
+            [1, 0,
+             self._dt * float(np.cos(self._X_k_post[3])),
+             0.5 * self._dt * self._dt * float(np.cos(self._X_k_post[3])),
+             0, 0, 0],
+            [1, 0,
+             self._dt * float(np.sin(self._X_k_post[3])),
+             0.5 * self._dt * self._dt * float(np.sin(self._X_k_post[3])),
+             0, 0, 0],
+            [0, 0, 1, self._dt, 0, 0, 0],
+            [0, 0, - self._micro_theta / self._mass, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, self._dt, 0.5 * self._dt * self._dt],
+            [0, 0, 0, 0, 0, 1, self._dt],
+            [0, 0, 0, 0, 0, - self._micro_eta / self._mass, 0]
+        ])
 
     def _set_gain(self):
-        E = self._C_k.dot(self._P_k_pre).dot(self._C_k.T) + self._H_k.dot(self._Q_k).dot(self._H_k.T) + self._R_k
-        self._L_k = self._P_k_pre.dot(self._C_k.T).dot(np.linalg.inv(E))
+        self._L_k = self._P_k_pre.dot(self._C_k.T).dot(np.linalg.inv(
+            self._C_k.dot(self._P_k_pre).dot(self._C_k.T)
+            + self._H_k.dot(self._Q_k).dot(self._H_k.T)
+            + self._R_k
+        ))
 
     def _update_states(self):
-        F = self._y_k - self._C_k.dot(self._X_k_pre) - self._D_k.dot(self._u_k)
-        self._X_k_post = self._X_k_pre + self._L_k.dot(F)
+        self._X_k_post = self._X_k_pre + self._L_k.dot(
+            self._y_k - self._C_k.dot(self._X_k_pre) - self._D_k.dot(self._u_k)
+        )
 
     def _update_error_covars(self):
-        self._P_k_post = (np.identity(5) - self._L_k.dot(self._C_k)).dot(self._P_k_pre)
+        self._P_k_post = (np.identity(7) - self._L_k.dot(self._C_k)).dot(self._P_k_pre)
 
     def _extr_states(self):
         self._X_k_extr = self._Phi_k.dot(self._X_k_post) + self._Gamma_k.dot(self._u_k)
 
     def _extr_error_covars(self):
-        self._P_k_extr = self._Phi_k.dot(self._P_k_post).dot(self._Phi_k.T) + self._G_k.dot(self._Q_k).dot(self._G_k.T)
+        self._P_k_extr = self._Phi_k.dot(self._P_k_post).dot(self._Phi_k.T) \
+            + self._G_k.dot(self._Q_k).dot(self._G_k.T)
 
     def _setup_next_iter(self):
         self._X_k_pre = self._X_k_extr
