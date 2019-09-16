@@ -192,23 +192,3 @@ class AdaptiveKalmanFilter(KalmanFilter):
                 self._Lambda_k[1][1] = 1 + self._M_k[1][1] / np.max(self._du_buffer[1]) * \
                                        self.sum_du_w(self._du_buffer[1], w_k)
         self._Q_k = self._Lambda_k.dot(self._Ro_k).dot(self._R_k)
-
-    # def _get_windowed_input(self):
-    #     u_win = self._sort_input()
-    #     w_k = []
-    #     for j in range(len(u_win)):
-    #         w_k.append([])
-    #         self._window.set_window(u_win[j])
-    #         w_k[j] = self._window.get_avg()
-    #     return w_k
-    #
-    # def _sort_input(self):
-    #     u_win = []
-    #     for u in self._u_buffer:
-    #         for i in range(len(u)):
-    #             try:
-    #                 u_win[i].append(u[i])
-    #             except IndexError:
-    #                 u_win.append([])
-    #                 u_win[i].append(u[i])
-    #     return u_win
