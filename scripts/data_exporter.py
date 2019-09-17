@@ -350,9 +350,8 @@ class AdaptiveKalmanSimulator(KalmanSimulator):
     def __init__(self, input=None, output=None, slice=(0, np.inf), legend=[]):
         super(AdaptiveKalmanSimulator, self).__init__(input, output, slice, legend)
 
-    def run(self, alpha=None, beta=None, Q_k=None, R_k=None, window=None, M_k=None):
-        kalman_filter = self.get_adaptive_kalman_filter(alpha, beta, Q_k, R_k, window, M_k)
-        self.set_kalman_state_plots(kalman_filter, self.input, self.output)
+    def run(self, kalman_filter):
+        self.set_kalman_state_plots([kalman_filter], self.input, self.output)
 
 
 class Compare(Experiment):
@@ -376,9 +375,9 @@ class ThesisDataExporter(object):
     def __init__(self):
         self.alpha = 10 #1.8
         self.beta = 7.4
-        self.r1 = 0.0001  #0.01
+        self.r1 = 0.1  #0.01
         self.r2 = 10
-        self.micro_theta = 10
+        self.micro_theta = 50
         self.micro_eta = 1
         self.mass = 1.02
 
@@ -566,10 +565,10 @@ class ThesisDataExporter(object):
     def export_line_sim(self):
         line_kalman_sim = self.get_line_kalman_simulation(self.line_sim_time, self.peak_vel, self.line_slice)
         # line_kalman_sim.export("sim_line_")
-        # line_adaptive_kalman_sim = self.get_line_adaptive_kalman_simulation(
-        #     self.line_sim_time, self.peak_vel, self.line_slice)
+        line_adaptive_kalman_sim = self.get_line_adaptive_kalman_simulation(
+             self.line_sim_time, self.peak_vel, self.line_slice)
         # line_adaptive_kalman_sim.export("sim_line_adaptive_")
-        self.run_compare([line_kalman_sim], self.line_slice, self.legend_sim)
+        self.run_compare([line_kalman_sim, line_adaptive_kalman_sim], self.line_slice, self.legend_sim)
 
     def export_octagon_sim(self):
         octagon_kalman_sim = self.get_octagon_kalman_simulation(
@@ -684,7 +683,6 @@ class ThesisDataExporter(object):
             kalman_sim.run(kalman_filter)
             return kalman_sim
 
-
     def get_line_adaptive_kalman_simulation(self,time=None, peak_vel=None, slice=(0, np.inf), legend=[]):
         if not time or not peak_vel:
             raise ValueError
@@ -695,7 +693,13 @@ class ThesisDataExporter(object):
             line_sim_output = line_sim.get_stamped_output()
             window = MovingWeightedSigWindow(10)
             adaptive_kalman_sim = AdaptiveKalmanSimulator(line_sim_input, line_sim_output, slice, legend)
-            adaptive_kalman_sim.run(self.alpha, self.beta, self.Q_k, self.R_k, window, self.M_k)
+            adaptive_kalman_filter = AdaptiveKalmanFilter(self.Q_k, self.R_k,
+                                                          self.alpha, self.beta,
+                                                          self.mass,
+                                                          self.micro_theta, self.micro_eta,
+                                                          window,
+                                                          self.M_k)
+            adaptive_kalman_sim.run(adaptive_kalman_filter)
             return adaptive_kalman_sim
 
     def get_octagon_kalman_simulation(self, time=None, peak_vel=None, peak_turn=None, slice=(0, np.inf), legend=[]):

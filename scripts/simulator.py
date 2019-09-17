@@ -170,12 +170,12 @@ class LineSimulator(SystemIOSimulator):
         #gauss = get_gauss(0.03, (0,0.5))
         gauss = get_gauss(0.3)
         conv = np.convolve(u0, gauss, mode="same")
-        grad = 110 * np.gradient(conv)
-        moving_noise = get_moving_noise(u0, 0.1, 0.01)
+        grad = 200 * np.gradient(conv)
+        moving_noise = get_moving_noise(u0, 0.5, 0.01)
         accel = 0
         accel += grad
         # accel += moving_noise
-        accel = np.roll(accel, 150)
+        accel = np.roll(accel, 30)
         # accel = np.negative(accel)
         zeros = np.zeros(len(self._time))
         self._output = (accel, zeros)
