@@ -138,18 +138,18 @@ class StateEstimator(object):
     #         v = np.sqrt(xdot * xdot + ydot * ydot)
     #         return x, y, v, psi, psidot
     #
-    # @staticmethod
-    # def _psi_state_limit(state=None):
-    #     if state is None:
-    #         raise ValueError
-    #     else:
-    #         x, y, v, psi, dpsi = state
-    #         k = abs(int(psi / (2 * np.pi)))
-    #         if psi > 2 * np.pi:
-    #             psi -= 2 * np.pi * k
-    #         elif psi < -2 * np.pi * k:
-    #             psi += 2 * np.pi * (k + 1)
-    #         return x, y, v, psi, dpsi
+    @staticmethod
+    def _psi_state_limit(state=None):
+        if state is None:
+            raise ValueError
+        else:
+            x, y, v, a, psi, dpsi, ddpsi = state
+            k = abs(int(psi / (2 * np.pi)))
+            if psi > 2 * np.pi:
+                psi -= 2 * np.pi * k
+            elif psi < -2 * np.pi * k:
+                psi += 2 * np.pi * (k + 1)
+            return x, y, v, a, psi, dpsi, ddpsi
 
     # @staticmethod
     # def _order_state(state=None):
