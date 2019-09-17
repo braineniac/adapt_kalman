@@ -48,12 +48,12 @@ class MovingWeightedWindow(object):
 class MovingWeightedSigWindow(MovingWeightedWindow):
 
     def __init__(self, size, alpha=10):
-        super(MovingWeightedSigWindow, self).__init__(size)
         if not isinstance(alpha, float) and not isinstance(alpha, int):
             raise ValueError("Alpha must be float or int!")
         if not alpha:
             raise ValueError("Alpha can't be zero!")
         self._alpha = alpha
+        super(MovingWeightedSigWindow, self).__init__(size)
 
     # def get_avg(self):
     #     y = np.zeros(self._size)
