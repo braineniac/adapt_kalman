@@ -53,7 +53,10 @@ class BagReader(object):
                 ang_y = odom_msg.message.twist.twist.angular.y
                 ang_z = odom_msg.message.twist.twist.angular.z
 
-                odom_data = (pos_x, pos_y, pos_z, roll, pitch, yaw, lin_x, lin_y, lin_z, ang_x, ang_y, ang_z)
+                odom_data = (pos_x, pos_y, pos_z,
+                             roll, pitch, yaw,
+                             lin_x, lin_y, lin_z,
+                             ang_x, ang_y, ang_z)
                 odom.append((t, odom_data))
             return odom
 
@@ -73,7 +76,8 @@ class BagReader(object):
                 gyro_y = imu_msg.message.angular_velocity.y
                 gyro_z = imu_msg.message.angular_velocity.z
 
-                imu_data = (accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z)
+                imu_data = (accel_x, accel_y, accel_z,
+                            gyro_x, gyro_y, gyro_z)
                 imu.append((t, imu_data))
             return imu
 
@@ -94,6 +98,7 @@ class BagReader(object):
                 ang_y = twist_msg.message.twist.twist.angular.y
                 ang_z = twist_msg.message.twist.twist.angular.z
 
-                twist_data = (lin_x, lin_y, lin_z, ang_x, ang_y, ang_z)
+                twist_data = (lin_x, lin_y, lin_z,
+                              ang_x, ang_y, ang_z)
                 twist.append((t, twist_data))
             return twist
