@@ -32,9 +32,9 @@ class MovingWeightedWindow(object):
         return self._size
 
     def get_weighted_sum(self, array=[]):
-        if not isinstance(array, list) or not isinstance(array, tuple):
+        if not isinstance(array, list) and not isinstance(array, tuple):
             raise ValueError("Input array is neither an array nor a tuple!")
-        if not array or not all(array):
+        if not array or all(array):
             raise ValueError("Input array is empty!")
         sum = 0
         for elem, weight in zip(array, self._weights):
