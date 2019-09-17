@@ -200,6 +200,7 @@ class AdaptiveKalmanFilter(KalmanFilter):
 
     def _adapt_covariance(self):
         if len(self._du_buffer[0]) >= self._window.get_size():
+            self._Lambda_k = np.identity(2)
             if np.max(self._du_buffer[0]) != 0.0:
                 self._Lambda_k[0][0] = 1 \
                     + self._M_k[0][0] / np.max(self._du_buffer[0]) \
