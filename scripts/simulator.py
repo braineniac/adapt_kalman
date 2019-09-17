@@ -33,16 +33,16 @@ def get_gauss(sigma=None, slice_tuple=None):
         return gauss
 
 
-def get_moving_noise(array=None, peak=None, moving_threshold=None):
-    if array is None or not peak or not moving_threshold:
+def get_noise(array=None, peak_still=None, peak_moving=None, moving_threshold=None):
+    if array is None or not peak_still or not moving_threshold:
         raise ValueError
     else:
         noise = []
         for x in array:
             if abs(x) > moving_threshold:
-                noise.append(np.random.normal(0, x * peak))
+                noise.append(np.random.normal(0, abs(x * peak_moving)))
             else:
-                noise.append(0)
+                noise.append(np.random.normal(0, abs(peak_still)))
         return noise
 
 
@@ -171,10 +171,10 @@ class LineSimulator(SystemIOSimulator):
         gauss = get_gauss(0.3)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 200 * np.gradient(conv)
-        moving_noise = get_moving_noise(u0, 0.5, 0.01)
+        moving_noise = get_noise(grad, 3, 2, 0.1)
         accel = 0
         accel += grad
-        # accel += moving_noise
+        accel += moving_noise
         accel = np.roll(accel, 30)
         # accel = np.negative(accel)
         zeros = np.zeros(len(self._time))
