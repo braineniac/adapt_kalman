@@ -203,9 +203,9 @@ class AdaptiveKalmanFilter(KalmanFilter):
             if np.max(self._du_buffer[0]) != 0.0:
                 self._Lambda_k[0][0] = 1 \
                     + self._M_k[0][0] / np.max(self._du_buffer[0]) \
-                    * self._window.get_weighted_sum(self._du_buffer[0])
+                    * self._window.get_weighted_sum(tuple(self._du_buffer[0]))
             if np.max(self._du_buffer[1]) != 0.0:
                 self._Lambda_k[1][1] = 1 \
                     + self._M_k[1][1] / np.max(self._du_buffer[1]) \
-                    * self._window.get_weighted_sum(self._du_buffer[0])
+                    * self._window.get_weighted_sum(tuple(self._du_buffer[0]))
         self._Q_k = self._Lambda_k.dot(self._Ro_k).dot(self._R_k)
