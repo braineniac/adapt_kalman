@@ -28,21 +28,21 @@ class KalmanFilter(object):
                  mass=1,
                  micro_theta=1, micro_eta=1,
                  x0=(0, 0, 0, 0, 0, 0, 0)):
-        if not isinstance(alpha, float) or not isinstance(alpha, int):
+        if not isinstance(alpha, float) and not isinstance(alpha, int):
             raise ValueError("Alpha is a number!")
-        if not isinstance(beta, float) or not isinstance(beta, int):
+        if not isinstance(beta, float) and not isinstance(beta, int):
             raise ValueError("Beta is a number!")
-        if not isinstance(mass, float) or not isinstance(mass, int):
+        if not isinstance(mass, float) and not isinstance(mass, int):
             raise ValueError("Mass is a number!")
-        if not isinstance(micro_theta, float) or not isinstance(micro_theta, int):
+        if not isinstance(micro_theta, float) and not isinstance(micro_theta, int):
             raise ValueError("micro_theta is a number!")
-        if not isinstance(micro_eta, float) or not isinstance(micro_eta, int):
+        if not isinstance(micro_eta, float) and not isinstance(micro_eta, int):
             raise ValueError("micro_eta is a number!")
         if not isinstance(Q_k, np.ndarray) or not isinstance(R_k, np.ndarray):
             raise ValueError("Q_k or R_k is not a numpy array!")
         if np.count_nonzero(Q_k) < 2 or np.count_nonzero(R_k) < 2:
             raise ValueError("Q_k or R_k covariance underdefined!")
-        if np.array(x0).shape != (7, 1):
+        if np.array(x0).shape != (7, ):
             raise ValueError("Incorrect shape for x0!")
         self._alpha = alpha
         self._beta = beta
