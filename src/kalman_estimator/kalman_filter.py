@@ -71,14 +71,14 @@ class KalmanFilter(object):
         self._Phi_k = np.zeros((7, 7))  # Dynamic Coefficient Matrix
         self._Gamma_k = np.zeros((7, 2))  # Input Coupling Matrix
         self._Gamma_k[3][0] = self._alpha / self._mass
-        self._Gamma_k[7][1] = self._beta / self._mass
+        self._Gamma_k[6][1] = self._beta / self._mass
         self._G_k = np.zeros((7, 2))  # Process Noise Input Coupling Matrix
         self._G_k[3][0] = self._alpha / self._mass
-        self._G_k[7][1] = self._beta / self._mass
+        self._G_k[6][1] = self._beta / self._mass
 
         self._C_k = np.zeros((2, 7))  # Measurement Sensitivity Matrix
-        self._C_k[3][0] = 1
-        self._C_k[5][1] = 1
+        self._C_k[0][3] = 1
+        self._C_k[1][5] = 1
         self._D_k = np.zeros((2, 7))  # Output Coupling Matrix
         self._H_k = np.zeros((2, 7))  # Process Noise Output Coupling Matrix
 
