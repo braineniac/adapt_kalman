@@ -64,7 +64,8 @@ class BagGenerator(object):
             roslaunch.configure_logging(uuid)
             roslaunch_file = roslaunch.rlutil.resolve_launch_arguments(cli_args)
             roslaunch_args = cli_args[2:]
-            parent = roslaunch.parent.ROSLaunchParent(uuid, [(roslaunch_file[0], roslaunch_args), ])
+            parent = roslaunch.parent.ROSLaunchParent(
+                uuid, [(roslaunch_file[0], roslaunch_args), ])
             parent.start()
             parent.spin()
 
@@ -74,7 +75,9 @@ class EKFGenerator(BagGenerator):
         super(EKFGenerator, self).__init__(bag_path, out_path, prefix)
 
     def generate(self, r1=None, r2=None, alpha=None, beta=None, postfix=""):
-        output = self.out_path + self.prefix + get_filename_from_path(self.bag_path) + postfix
+        output = self.out_path + self.prefix \
+            + get_filename_from_path(self.bag_path) \
+            + postfix
         if not r1 or not r2 or not alpha or not beta:
             raise ValueError
         elif check_file(output):
@@ -98,7 +101,9 @@ class IMUTransformGenerator(BagGenerator):
         super(IMUTransformGenerator, self).__init__(bag_path, out_path, prefix)
 
     def generate(self, postfix=""):
-        output = self.out_path + self.prefix + get_filename_from_path(self.bag_path) + postfix
+        output = self.out_path + self.prefix \
+            + get_filename_from_path(self.bag_path) \
+            + postfix
         if check_file(output):
             print("File {} already exists, skipping..." .format(output))
         else:
