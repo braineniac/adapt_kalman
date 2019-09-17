@@ -51,13 +51,13 @@ class KalmanFilter(object):
         self._micro_eta = micro_theta
         self._R_k = R_k  # Observation Covariance Matrix
         self._Q_k = Q_k  # Process Covariance Matrix
-        self._x0 = x0  # Initial State Vector
+        self._x0 = np.array(x0).reshape((7, 1))  # Initial State Vector
 
         self._u_k = np.zeros((2, 1))  # Input Vector
         self._y_k = np.zeros((2, 1))  # Measurement Vector
         self._L_k = np.zeros((7, 2))  # Kalman Gain Matrix
 
-        self._x_k_pre = x0  # A Priori state vector
+        self._x_k_pre = self._x0  # A Priori state vector
         self._x_k_post = np.zeros((7, 1))  # A Posteriori state vector
         self._x_k_extr = np.zeros((7, 1))  # Extrapolated state vector
 
@@ -79,8 +79,8 @@ class KalmanFilter(object):
         self._C_k = np.zeros((2, 7))  # Measurement Sensitivity Matrix
         self._C_k[0][3] = 1
         self._C_k[1][5] = 1
-        self._D_k = np.zeros((2, 7))  # Output Coupling Matrix
-        self._H_k = np.zeros((2, 7))  # Process Noise Output Coupling Matrix
+        self._D_k = np.zeros((2, 2))  # Output Coupling Matrix
+        self._H_k = np.zeros((2, 2))  # Process Noise Output Coupling Matrix
 
         self._dt = 0
         self._t = 0
