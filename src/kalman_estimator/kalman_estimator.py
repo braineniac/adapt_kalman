@@ -21,6 +21,7 @@ import numpy as np
 from scipy import signal
 
 from kalman_filter import KalmanFilter
+from bag_reader import BagReader
 
 
 def check_directory(dir=None):
@@ -34,28 +35,39 @@ def check_directory(dir=None):
 
 class BagSystemIO(object):
 
-    def __init__(self):
+    def __init__(self,
+                 bag_reader=None,
+                 input_twist=None,
+                 output_imu=None,
+                 state_odom=None):
+        if not isinstance(bag_reader, BagReader):
+            raise ValueError("Passed bag_reader not BagReader!")
+        self._bag_reader = bag_reader
+        self._input_twist = input_twist
+        self._output_imu = output_imu
+        self._state_odom = state_odom
+
         self._input_mask = [1, 0, 0, 0, 0, 1]
         self._output_mask = [1, 0, 0, 0, 0, 1]
         self._state_mask = [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1]
 
-    def get_input(self, stamped_input=None):
-        if not stamped_input:
-            raise ValueError
-        else:
-            return self._filter(stamped_input, self._input_mask)
+    def get_input(self):
+        if not self._input_twist:
+            raise ValueError("Input topic not defined!")
+        stamped_input = self._bag_reader.read_twist(self._input_twist)
+        return self._filter(stamped_input, self._input_mask)
 
     def get_output(self, stamped_output=None):
-        if not stamped_output:
-            raise ValueError
-        else:
-            return self._filter(stamped_output, self._output_mask)
+        if not self._output_imu:
+            raise ValueError("Output topic not defined!")
+        stamped_output = self._bag_reader.read_imu(self._output_imu)
+        return self._filter(stamped_output, self._output_mask)
 
     def get_states(self, stamped_states=None):
-        if not stamped_states:
-            raise ValueError
-        else:
-            return self._filter(stamped_states, self._state_mask)
+        if not self._state_odom:
+            raise ValueError("State topic not defined!")
+        stamped_states = self._bag_reader.read_odom(self._state_odom)
+        return self._filter(stamped_states, self._state_mask)
 
     @staticmethod
     def _filter(stamped_points=None, mask=None):
