@@ -33,7 +33,7 @@ def check_directory(dir=None):
     return True
 
 
-class BagSystemIO(object):
+class BagSysIO(object):
 
     def __init__(self,
                  bag_reader=None,
@@ -228,14 +228,14 @@ class KalmanEstimator(StateEstimator):
             self._stamped_Q = stamped_Q
 
 
-class StatePlotter(object):
-    def __init__(self, state_estimator=None):
+class EstimationPlotter(object):
+    def __init__(self, state_estimator=None, slice=(0, np.inf), legend=[]):
         if not isinstance(state_estimator, StateEstimator):
             raise ValueError
         else:
             self._state_estimator = state_estimator
-            self._start_slice = 0
-            self._end_slice = np.inf
+            self._slice = slice
+            self._legend = legend
             self._input_titles = ["Input u0", "Input u1"]
             self._output_titles = ["Output y0", "Output y1"]
             self._states_titles = [
@@ -243,6 +243,7 @@ class StatePlotter(object):
                 "v state", "a state",
                 "phi state", "dphi state", "ddphi_state"
             ]
+            self._Q_titles = ["Q[0][0]", "Q[1][1]"]
 
     def get_input_titles(self):
         return self._input_titles
@@ -252,6 +253,12 @@ class StatePlotter(object):
 
     def get_states_titles(self):
         return self._states_titles
+
+    def get_Q_titles(self):
+        return self._Q_titles
+
+    def get_legend(self):
+        return self._legend
 
     def get_input_plot(self):
         plot_u = [[], []]
@@ -315,13 +322,6 @@ class StatePlotter(object):
                 plot_Q1.append(Q1)
                 plot_t.append(t)
             return plot_t, (plot_Q0, plot_Q1)
-
-    def set_slice_times(self, start=0, end=np.inf):
-        if start > end:
-            raise ValueError
-        else:
-            self._start_slice = start
-            self._end_slice = end
 
     def export_output(self, pre="", post=""):
         t, y = self.get_output_plot()
@@ -424,8 +424,8 @@ class StatePlotter(object):
         if not isinstance(t_list, list) or data_list is None:
             raise ValueError
         else:
-            if t_list[-1] < self._end_slice != np.inf:
-                t_list.append(self._end_slice)
+            if t_list[-1] < self._slice[1] != np.inf:
+                t_list.append(self._slice[1])
                 data_list.append(data_list[-1])
             return t_list, data_list
 
@@ -436,9 +436,9 @@ class StatePlotter(object):
             start_index = 0
             end_index = 0
             for t in t_array:
-                if t <= self._end_slice:
+                if t <= self._slice[1]:
                     end_index += 1
-                if t < self._start_slice:
+                if t < self._slice[0]:
                     start_index += 1
             return start_index, end_index
 
