@@ -26,7 +26,8 @@ class KalmanFilter(object):
                  Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
                  alpha=1, beta=1,
                  mass=1,
-                 micro_theta=1, micro_eta=1,
+                 length=1, width=1,
+                 micro_v=1, micro_dpsi=1,
                  x0=(0, 0, 0, 0, 0, 0, 0)):
         if not isinstance(alpha, float) and not isinstance(alpha, int):
             raise ValueError("Alpha is a number!")
@@ -47,8 +48,11 @@ class KalmanFilter(object):
         self._alpha = alpha
         self._beta = beta
         self._mass = mass
-        self._micro_theta = micro_theta
-        self._micro_eta = micro_theta
+        self._length = length
+        self._width = width
+        self._J = (mass * (length * length + width * width)) / 12
+        self._micro_v = micro_v
+        self._micro_dpsi = micro_dpsi
         self._R_k = R_k  # Observation Covariance Matrix
         self._Q_k = Q_k  # Process Covariance Matrix
         self._x0 = np.array(x0).reshape((7, 1))  # Initial State Vector
@@ -71,10 +75,10 @@ class KalmanFilter(object):
         self._Phi_k = np.zeros((7, 7))  # Dynamic Coefficient Matrix
         self._Gamma_k = np.zeros((7, 2))  # Input Coupling Matrix
         self._Gamma_k[3][0] = self._alpha / self._mass
-        self._Gamma_k[6][1] = self._beta / self._mass
+        self._Gamma_k[6][1] = self._beta / self._J
         self._G_k = np.zeros((7, 2))  # Process Noise Input Coupling Matrix
         self._G_k[3][0] = self._alpha / self._mass
-        self._G_k[6][1] = self._beta / self._mass
+        self._G_k[6][1] = self._beta / self._J
 
         self._C_k = np.zeros((2, 7))  # Measurement Sensitivity Matrix
         self._C_k[0][3] = 1
@@ -125,10 +129,10 @@ class KalmanFilter(object):
              0.5 * self._dt * self._dt * float(np.sin(self._x_k_post[4])),
              0, 0, 0],
             [0, 0, 1, self._dt, 0, 0, 0],
-            [0, 0, - self._micro_theta / self._mass, 0, 0, 0, 0],
+            [0, 0, - self._micro_v / self._mass, 0, 0, 0, 0],
             [0, 0, 0, 0, 1, self._dt, 0.5 * self._dt * self._dt],
             [0, 0, 0, 0, 0, 1, self._dt],
-            [0, 0, 0, 0, 0, - self._micro_eta / self._mass, 0]
+            [0, 0, 0, 0, 0, - self._micro_dpsi / self._J, 0]
         ])
 
     def _set_gain(self):
