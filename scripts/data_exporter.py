@@ -373,13 +373,15 @@ class Compare(Experiment):
 class ThesisDataExporter(object):
 
     def __init__(self):
-        self.alpha = 10 #1.8
-        self.beta = 7.4
-        self.r1 = 0.1  #0.01
+        self.alpha = 10.905
+        self.beta = 1.5267
+        self.r1 = 0.1
         self.r2 = 10
-        self.micro_theta = 50
-        self.micro_eta = 1
+        self.micro_v = 50
+        self.micro_dpsi = 1
         self.mass = 1.02
+        self.length = 0.25
+        self.width = 0.14
 
         self.R_k = np.zeros((2, 2))
         self.R_k[0][0] = 0.04 * 0.04
