@@ -14,35 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os.path
-
-import numpy as np
 from matplotlib import pyplot as plt
 
-from kalman_estimator.kalman_filter import KalmanFilter, AdaptiveKalmanFilter
-from kalman_estimator.moving_weighted_window import MovingWeightedSigWindow
-from kalman_estimator.kalman_estimator import BagSysIO, StateEstimator, KalmanEstimator, EstimationPlots
-from bag_reader import BagReader
-from simulator import LineSimulator, OctagonSimulator
-from bag_generator import EKFGenerator, IMUTransformGenerator
-
-
-def check_file(bag=None):
-    if os.path.isfile(bag):
-        if not os.access(bag, os.R_OK):
-            raise ValueError
-        return True
-    else:
-        return False
-
-
-def check_directory(dir=None):
-    if not dir:
-        raise ValueError
-    elif not os.path.exists(dir):
-        os.makedirs(dir)
-        print("Created directory " + dir)
-    return True
+from kalman_estimator.kalman_filter import KalmanFilter
+from kalman_estimator.kalman_estimator import BagSysIO, KalmanEstimator
 
 
 class Experiment(object):
