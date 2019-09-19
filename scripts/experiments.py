@@ -75,16 +75,26 @@ class Experiment(object):
 
 class ExperimentSuite(object):
 
-    def __init__(self, experiments=None):
+    def __init__(self, name="", experiments=None):
         if not isinstance(experiments, list):
             raise ValueError("Pass a list of Experiment!")
         if not all(isinstance(exp, Experiment) for exp in experiments):
             raise ValueError("Pass a list only containing Experiment!")
+        self._name = name
         self._experiments = experiments
 
-    def run_suite(self):
-        for experiment in self._experiments:
-            pass
+    def plot_suite(self):
+        experiment_plotter = ExperimentPlotter(self._experiments)
+        experiment_plotter.plot()
+
+    def export_suite(self):
+        for i in range(len(self._experiments)):
+            estimation_plots = self._experiments[i].get_estimation_plots()
+            estimation_plots.export_input(self._name + str(i) + "_")
+            estimation_plots.export_output(self._name + str(i) + "_")
+            estimation_plots.export_states(self._name + str(i) + "_")
+            estimation_plots.export_x0x1(self._name + str(i) + "_")
+            estimation_plots.export_Q(self._name + str(i) + "_")
 
 
 class ExperimentPlotter(object):
@@ -199,14 +209,6 @@ class ExperimentPlotter(object):
                               i,
                               option,
                               legend)
-
-    def export(self, pre=""):
-        for i in range(len(self.state_plots)):
-            self.state_plots[i].export_input(pre + str(i) + "_")
-            self.state_plots[i].export_output(pre + str(i) + "_")
-            self.state_plots[i].export_states(pre + str(i) + "_")
-            self.state_plots[i].export_x0x1(pre + str(i) + "_")
-            self.state_plots[i].export_Q(pre + str(i) + "_")
 
 
 
