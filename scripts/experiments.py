@@ -58,11 +58,11 @@ class ExperimentSuite(object):
         self._name = name
         self._experiments = experiments
 
-    def plot_suite(self):
+    def plot(self):
         experiment_plotter = ExperimentPlotter(self._experiments)
         experiment_plotter.plot()
 
-    def export_suite(self):
+    def export(self):
         for i in range(len(self._experiments)):
             estimation_plots = self._experiments[i].get_estimation_plots()
             estimation_plots.export_input(self._name + str(i) + "_")
