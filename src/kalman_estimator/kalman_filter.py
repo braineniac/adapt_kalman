@@ -35,9 +35,9 @@ class KalmanFilter(object):
             raise ValueError("Beta is a number!")
         if not isinstance(mass, float) and not isinstance(mass, int):
             raise ValueError("Mass is a number!")
-        if not isinstance(micro_theta, float) and not isinstance(micro_theta, int):
+        if not isinstance(micro_v, float) and not isinstance(micro_v, int):
             raise ValueError("micro_theta is a number!")
-        if not isinstance(micro_eta, float) and not isinstance(micro_eta, int):
+        if not isinstance(micro_dpsi, float) and not isinstance(micro_dpsi, int):
             raise ValueError("micro_eta is a number!")
         if not isinstance(Q_k, np.ndarray) or not isinstance(R_k, np.ndarray):
             raise ValueError("Q_k or R_k is not a numpy array!")

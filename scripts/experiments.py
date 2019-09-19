@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 from matplotlib import pyplot as plt
 
-from kalman_estimator.kalman_filter import KalmanFilter
-from kalman_estimator.kalman_estimator import BagSysIO, KalmanEstimator
+from kalman_estimator import KalmanFilter
+from kalman_estimator import BagSysIO, KalmanEstimator, EstimationPlots
 
 
 class Experiment(object):
@@ -43,8 +44,8 @@ class Experiment(object):
 
     def get_estimation_plots(self):
         estimation = self._get_estimation()
-        estimation_plotter = EstimationPlotter(estimation,
-                                               self._slice, self._legend)
+        estimation_plotter = EstimationPlots(estimation,
+                                             self._slice, self._legend)
         return estimation_plotter
 
 
@@ -112,6 +113,7 @@ class ExperimentPlotter(object):
         self._plot_states_figure()
         self._plot_xy_state_figure()
         self._plot_Q_figure()
+        plt.show()
 
     def _plot_input_figure(self):
         self.add_figure()
@@ -120,13 +122,13 @@ class ExperimentPlotter(object):
             plt.subplot(len(input_titles) * 100 + 10 + 1 + i)
             plt.ylabel(input_titles[i])
             plt.xlabel("Time [s]")
-            for estimation_plots, option in
-            zip(self._all_estimation_plots, self._options):
+            for estimation_plots, option in \
+                    zip(self._all_estimation_plots, self._options):
                 legend = estimation_plots.get_legend()
                 self._add_plot(estimation_plots.get_input_plot(),
-                              i,
-                              option,
-                              legend)
+                               i,
+                               option,
+                               legend)
 
     def _plot_output_figure(self):
         self.add_figure()
@@ -135,40 +137,40 @@ class ExperimentPlotter(object):
             plt.subplot(len(output_titles) * 100 + 10 + 1 + i)
             plt.ylabel(output_titles[i])
             plt.xlabel("Time [s]")
-            for estimation_plots, option in
-            zip(self._all_estimation_plots, self._options):
+            for estimation_plots, option in \
+                    zip(self._all_estimation_plots, self._options):
                 legend = estimation_plots.get_legend()
                 self._add_plot(estimation_plots.get_output_plot(),
-                              i,
-                              option,
-                              legend)
+                               i,
+                               option,
+                               legend)
 
     def _plot_states_figure(self):
         self.add_figure()
-        states_titles = self._all_estimation_plots.get_states_titles()
+        states_titles = self._all_estimation_plots[0].get_states_titles()
         for i in range(len(states_titles)):
             plt.subplot(len(states_titles) * 100 + 10 + 1 + i)
             plt.ylabel(states_titles[i])
             plt.xlabel("Time [s]")
-            for estimation_plots, option in
-            zip(self._all_estimation_plots, self._options):
+            for estimation_plots, option in \
+                    zip(self._all_estimation_plots, self._options):
                 legend = estimation_plots.get_legend()
                 self._add_plot(estimation_plots.get_states_plot(),
-                              i,
-                              option,
-                              legend)
+                               i,
+                               option,
+                               legend)
 
     def _plot_xy_state_figure(self):
         self.add_figure()
         plt.xlabel("x")
         plt.ylabel("y")
-        for estimation_plots, option in
-            zip(self._all_estimation_plots, self._options):
-                legend = estimation_plots.get_legend()
-                self.add_plot(estimation_plots.get_x0x1_plot(),
-                              None,
-                              option,
-                              legend)
+        for estimation_plots, option in \
+                zip(self._all_estimation_plots, self._options):
+            legend = estimation_plots.get_legend()
+            self._add_plot(estimation_plots.get_x0x1_plot(),
+                           None,
+                           option,
+                           legend)
 
     def _plot_Q_figure(self):
         self.add_figure()
@@ -177,10 +179,10 @@ class ExperimentPlotter(object):
             plt.subplot(len(Q_titles) * 100 + 10 + 1 + i)
             plt.xlabel("Time [s]")
             plt.ylabel(Q_titles[i])
-            for estimation_plots, option in
-            zip(self._all_estimation_plots, self._options):
+            for estimation_plots, option in \
+                    zip(self._all_estimation_plots, self._options):
                 legend = estimation_plots.get_legend()
                 self._add_plot(estimation_plots.get_Q_plot(),
-                              i,
-                              option,
-                              legend)
+                               i,
+                               option,
+                               legend)

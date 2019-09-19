@@ -153,7 +153,7 @@ include_directories(
 #############
 ## Install ##
 #############
-catkin_install_python(PROGRAMS  scripts/data_exporter.py
+catkin_install_python(PROGRAMS  scripts/thesis.py
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # all install targets should use catkin DESTINATION variables
