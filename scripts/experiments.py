@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 
 from kalman_estimator.kalman_filter import KalmanFilter, AdaptiveKalmanFilter
 from kalman_estimator.moving_weighted_window import MovingWeightedSigWindow
-from kalman_estimator.kalman_estimator import BagSysIO, StateEstimator, KalmanEstimator, EstimationPlotter
+from kalman_estimator.kalman_estimator import BagSysIO, StateEstimator, KalmanEstimator, EstimationPlots
 from bag_reader import BagReader
 from simulator import LineSimulator, OctagonSimulator
 from bag_generator import EKFGenerator, IMUTransformGenerator
@@ -73,25 +73,18 @@ class Experiment(object):
         return estimation_plotter
 
 
-class KalmanExperiment(Experiment):
-    def __init__(self, bag=None, twist_topic=None, imu_topic=None, slice=(0, np.inf), legends=[]):
-        if not bag or not twist_topic or not imu_topic:
-            raise ValueError
-        else:
-            super(KalmanExperiment, self).__init__(slice, legends)
-            self.bag = bag
-            self.twist_topic = twist_topic
-            self.imu_topic = imu_topic
+class ExperimentSuite(object):
 
-    def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None):
-        kalman_filter = self.get_kalman_filter(alpha=alpha, beta=beta, Q_k=Q_k, R_k=R_k)
-        return kalman_filter
+    def __init__(self, experiments=None):
+        if not isinstance(experiments, list):
+            raise ValueError("Pass a list of Experiment!")
+        if not all(isinstance(exp, Experiment) for exp in experiments):
+            raise ValueError("Pass a list only containing Experiment!")
+        self._experiments = experiments
 
-    def run(self, alpha=None, beta=None, Q_k=None, R_k=None):
-        kalman_filters = self.get_kalman_filters(alpha, beta, Q_k, R_k)
-        input = self.get_sys_input(self.bag, self.twist_topic)
-        output = self.get_sys_output(self.bag, self.imu_topic)
-        self.set_kalman_state_plots(kalman_filters, input, output)
+    def run_suite(self):
+        for experiment in self._experiments:
+            pass
 
 
 class ExperimentPlotter(object):
@@ -99,11 +92,11 @@ class ExperimentPlotter(object):
 
     @staticmethod
     def add_figure():
-        plt.figure(Experiment.figure)
-        Experiment.figure += 1
+        plt.figure(ExperimentPlotter.figure)
+        ExperimentPlotter.figure += 1
 
     @staticmethod
-    def add_plot(stamped_plot=None, dimension=None, option=None, legend=None):
+    def _add_plot(stamped_plot=None, dimension=None, option=None, legend=None):
         if not stamped_plot:
             raise ValueError
         else:
@@ -116,61 +109,96 @@ class ExperimentPlotter(object):
                 plt.plot(t, plot, option, label=legend)
                 plt.legend()
 
+    def __init__(self, experiments=None):
+        if not isinstance(experiments, list):
+            raise ValueError("Pass a list of Experiment!")
+        if not all(isinstance(exp, Experiment) for exp in experiments):
+            raise ValueError("Pass a list only containing Experiment!")
+        self._experiments = experiments
+        self._all_estimation_plots = []
+        self._options = ["b", "r", "k", "m", "g"]
+
     def plot(self):
-        options = ["b", "r", "k", "m", "g"]
-        self.plot_input_figure(options, self.legends)
-        self.plot_output_figure()
-        self.plot_states_figure(options, self.legends)
-        self.plot_xy_state_figure(options, self.legends)
-        self.plot_Q_figure()
+        for experiment in self._experiments:
+            estimation_plots = experiment.get_estimation_plots()
+            self._all_estimation_plots.append(estimation_plots)
+        self._plot_input_figure()
+        self._plot_output_figure()
+        self._plot_states_figure()
+        self._plot_xy_state_figure()
+        self._plot_Q_figure()
 
-    def plot_input_figure(self, options=None, legends=None):
+    def _plot_input_figure(self):
         self.add_figure()
-        num_titles = len(self.state_plots[0].get_input_titles())
-        for i in range(num_titles):
-            plt.subplot(num_titles * 100 + 10 + 1 + i)
-            plt.ylabel(self.state_plots[0].get_input_titles()[i])
+        input_titles = self._all_estimation_plots[0].get_input_titles()
+        for i in range(len(input_titles)):
+            plt.subplot(len(input_titles) * 100 + 10 + 1 + i)
+            plt.ylabel(input_titles[i])
             plt.xlabel("Time [s]")
-            for state_plot, option, legend in zip(self.state_plots, options, legends):
-                self.add_plot(state_plot.get_input_plot(), i, option, legend)
+            for estimation_plots, option in
+            zip(self._all_estimation_plots, self._options):
+                legend = estimation_plots.get_legend()
+                self._add_plot(estimation_plots.get_input_plot(),
+                              i,
+                              option,
+                              legend)
 
-    def plot_output_figure(self):
+    def _plot_output_figure(self):
         self.add_figure()
-        num_titles = len(self.state_plots[0].get_output_titles())
-        for i in range(num_titles):
-            plt.subplot(num_titles * 100 + 10 + 1 + i)
-            plt.ylabel(self.state_plots[0].get_output_titles()[i])
+        output_titles = self._all_estimation_plots[0].get_output_titles()
+        for i in range(len(output_titles)):
+            plt.subplot(len(output_titles) * 100 + 10 + 1 + i)
+            plt.ylabel(output_titles[i])
             plt.xlabel("Time [s]")
-            self.add_plot(self.state_plots[0].get_output_plot(), i)
+            for estimation_plots, option in
+            zip(self._all_estimation_plots, self._options):
+                legend = estimation_plots.get_legend()
+                self._add_plot(estimation_plots.get_output_plot(),
+                              i,
+                              option,
+                              legend)
 
-    def plot_states_figure(self, options=None, legends=None):
+    def _plot_states_figure(self):
         self.add_figure()
-        num_titles = len(self.state_plots[0].get_states_titles())
-        for i in range(num_titles):
-            plt.subplot(num_titles * 100 + 10 + 1 + i)
-            plt.ylabel(self.state_plots[0].get_states_titles()[i])
+        states_titles = self._all_estimation_plots.get_states_titles()
+        for i in range(len(states_titles)):
+            plt.subplot(len(states_titles) * 100 + 10 + 1 + i)
+            plt.ylabel(states_titles[i])
             plt.xlabel("Time [s]")
-            for state_plot, option, legend in zip(self.state_plots, options, legends):
-                self.add_plot(state_plot.get_states_plot(), i, option, legend)
+            for estimation_plots, option in
+            zip(self._all_estimation_plots, self._options):
+                legend = estimation_plots.get_legend()
+                self._add_plot(estimation_plots.get_states_plot(),
+                              i,
+                              option,
+                              legend)
 
-    def plot_xy_state_figure(self, options=None, legends=None):
+    def _plot_xy_state_figure(self):
         self.add_figure()
         plt.xlabel("x")
         plt.ylabel("y")
-        for state_plot, option, legend in zip(self.state_plots, options, legends):
-            self.add_plot(state_plot.get_x0x1_plot(), None, option, legend)
+        for estimation_plots, option in
+            zip(self._all_estimation_plots, self._options):
+                legend = estimation_plots.get_legend()
+                self.add_plot(estimation_plots.get_x0x1_plot(),
+                              None,
+                              option,
+                              legend)
 
-    def plot_Q_figure(self, options=None, legends=None):
+    def _plot_Q_figure(self):
         self.add_figure()
-        for i in range(0, 2):
-            plt.subplot(2 * 100 + 10 + 1 + i)
+        Q_titles = self._all_estimation_plots[0].get_Q_titles()
+        for i in range(len(Q_titles)):
+            plt.subplot(len(Q_titles) * 100 + 10 + 1 + i)
             plt.xlabel("Time [s]")
-            plt.ylabel("Q" + str(i))
-            for state_plot in self.state_plots:
-                try:
-                    self.add_plot(state_plot.get_Q_plot(), i, options, legends)
-                except ValueError:
-                    pass
+            plt.ylabel(Q_titles[i])
+            for estimation_plots, option in
+            zip(self._all_estimation_plots, self._options):
+                legend = estimation_plots.get_legend()
+                self._add_plot(estimation_plots.get_Q_plot(),
+                              i,
+                              option,
+                              legend)
 
     def export(self, pre=""):
         for i in range(len(self.state_plots)):
@@ -313,12 +341,7 @@ class Compare(Experiment):
             super(Compare, self).__init__(slice, legends)
             self.experiments = experiments
 
-    def run(self):
-        for experiment in self.experiments:
-            if not experiment.get_state_plots():
-                raise ValueError
-            else:
-                self.state_plots.append(experiment.get_state_plots()[0])
+
 
 
 class ThesisDataExporter(object):
