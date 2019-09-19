@@ -50,8 +50,8 @@ class ThesisConfig(object):
     beta = 1.5267
     r1 = 0.1
     r2 = 10
-    micro_v = 50
-    micro_dpsi = 10
+    micro_v = 10
+    micro_dpsi = 0.147
     mass = 1.02
     length = 0.25
     width = 0.14
@@ -81,6 +81,9 @@ class ThesisConfig(object):
     straight_nojerk_bag_name = "5m_medium.bag"
     straight_nojerk_bag = out_trans + "trans_" + straight_nojerk_bag_name
 
+    turn_nojerk_bag_name = "5turns.bag"
+    turn_nojerk_bag = out_trans + "trans_" + turn_nojerk_bag_name
+
     alphas_single_bag = "5m_medium.bag"
     betas_single_bag = "5turns.bag"
     alphas_bag = "5m_m.bag"
@@ -93,7 +96,9 @@ class ThesisConfig(object):
     micro_v_list = [10, 11, 12]
     micro_v_slice = (0, np.inf)
     micro_v_legend = [str(x) for x in micro_v_list]
-    micro_dpsi_list = [10, 100, 1000]
+    micro_dpsi_list = [0.143, 0.145, 0.147, 0.149, 0.151]
+    micro_dpsi_slice = (0, np.inf)
+    micro_dpsi_legend = [str(x) for x in micro_dpsi_list]
 
     alphas_slice = [9, 32]
     alpha_multi_slice = [0, np.inf]
@@ -183,14 +188,36 @@ class MicroVTune(ThesisExperimentSuite):
         return experiment_suite
 
 
+class MicroDPsiTune(ThesisExperimentSuite):
 
-class DragPsiTune(ThesisExperimentSuite):
+    def __init__(self):
+        super(MicroDPsiTune, self).__init__([ThesisConfig.turn_nojerk_bag])
 
-    def __init__(self, bag=None):
-        super(self, DragPsiTune).__init__([bag])
+    def _get_kalman_filters(self):
+        kalman_filters = []
+        for micro_dpsi in ThesisConfig.micro_dpsi_list:
+            kalman_filter = KalmanFilter(
+                ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+                ThesisConfig.alpha, ThesisConfig.beta,
+                ThesisConfig.mass,
+                ThesisConfig.length, ThesisConfig.width,
+                ThesisConfig.micro_v, micro_dpsi
+            )
+            kalman_filters.append(kalman_filter)
+        return kalman_filters
 
-    def run(self):
-        pass
+    def _get_experiment_suite(self):
+        experiments = []
+        for kalman_filter, legend in \
+                zip(self._kalman_filters, ThesisConfig.micro_dpsi_legend):
+            experiment = Experiment(
+                self._bags_sys_io[0],
+                kalman_filter,
+                ThesisConfig.micro_dpsi_slice,
+                legend)
+            experiments.append(experiment)
+        experiment_suite = ExperimentSuite("dpsi_v_tune", experiments)
+        return experiment_suite
 
 #
 # class AlphaExperiment(KalmanExperiment):
@@ -639,3 +666,5 @@ class DragPsiTune(ThesisExperimentSuite):
 if __name__ == '__main__':
     micro_v_tune = MicroVTune()
     micro_v_tune.plot()
+    # micro_dpsi_tune = MicroDPsiTune()
+    # micro_dpsi_tune.plot()
