@@ -228,7 +228,7 @@ class KalmanEstimator(StateEstimator):
             self._stamped_Q = stamped_Q
 
 
-class EstimationPlotter(object):
+class EstimationPlots(object):
     def __init__(self, state_estimator=None, slice=(0, np.inf), legend=[]):
         if not isinstance(state_estimator, StateEstimator):
             raise ValueError
