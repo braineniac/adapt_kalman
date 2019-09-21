@@ -78,7 +78,6 @@ class ThesisConfig(object):
 
     output = "/home/dan/ws/rosbag/garry3/"
     out_trans = output + "trans/"
-    out_ekf = output + "ekf/"
 
     straight_nojerk_bag_name = "5m_medium.bag"
     straight_nojerk_bag = out_trans + "trans_" + straight_nojerk_bag_name
@@ -86,36 +85,35 @@ class ThesisConfig(object):
     turn_nojerk_bag_name = "5turns.bag"
     turn_nojerk_bag = out_trans + "trans_" + turn_nojerk_bag_name
 
-    alphas_single_bag = "5m_medium.bag"
-    betas_single_bag = "5turns.bag"
-    alphas_bag = "5m_m.bag"
-    betas_bag = "5turns_m.bag"
-    alphas_multi_bag = "10m.bag"
-    betas_multi_bag = "10turns.bag"
-    octagon_bag = "loops_7-8.bag"
-    floor_bag = "floor.bag"
+    straight_jerk_bag_name = "5m_m.bag"
+    straight_jerk_bag = out_trans + "trans_" + straight_jerk_bag_name
 
-    micro_v_list = [5, 6, 7]
+    turn_jerk_bag_name = "5turns_m.bag"
+    turn_jerk_bag = out_trans + "trans_" + turn_jerk_bag_name
+
+    octagon_bag_name = "loops_7-8.bag"
+    octagon_bag = out_trans + "trans_" + octagon_bag_name
+
+    floor_bag_name = "floor.bag"
+    floor_bag = out_trans + "trans_" + floor_bag_name
+
+    micro_v_list = [4, 5, 6, 7, 8]
     micro_v_slice = (0, np.inf)
     micro_v_legend = [str(x) for x in micro_v_list]
     micro_dpsi_list = [0.143, 0.145, 0.147, 0.149, 0.151]
     micro_dpsi_slice = (0, np.inf)
     micro_dpsi_legend = [str(x) for x in micro_dpsi_list]
 
-    line_sim_time = 5
+    micro_v_test_slice = (0, np.inf)
+    micro_v_test_legend = ["nojerk", "jerk"]
+    micro_dpsi_test_slice = (0, np.inf)
+    micro_dpsi_test_legend = ["nojerk", "jerk"]
+
+    line_sim_time = 10
+    peak_vel = 1
     line_sim_slice = (0, np.inf)
     line_sim_legend = ["KF", "aKF"]
     line_sim_window = MovingWeightedSigWindow(300)
-
-    legend_multi = ["single", "multi"]
-    legend_adapt = ["reference", "single", "multi"]
-    legend_ekf = ["EKF", "multi adapt"]
-    legend_sim = ["no adapt", "adapt"]
-
-    line_sim_time = 10
-    octagon_sim_time = 50
-    peak_vel = 1
-    peak_turn = 1.7
 
     @staticmethod
     def get_Q_k(r1=None, r2=None):
@@ -134,11 +132,11 @@ class ThesisExperimentSuite(ExperimentSuite):
         self._sys_IOs = []
         self._kalman_filters = []
 
-        self._set_io()
+        self._set_IOs()
         self._set_kalman_filters()
         self._set_experiments()
 
-    def _get_bag_ios(self, bags=[]):
+    def _get_bag_IOs(self, bags=[]):
         bags_sys_IO = []
         for bag in bags:
             bag_reader = BagReader(bag)
@@ -148,7 +146,7 @@ class ThesisExperimentSuite(ExperimentSuite):
             bags_sys_IO.append(bag_sys_IO)
         return bags_sys_IO
 
-    def _set_io(self):
+    def _set_IOs(self):
         raise NotImplementedError
 
     def _set_kalman_filters(self):
@@ -163,8 +161,8 @@ class MicroVTune(ThesisExperimentSuite):
     def __init__(self):
         super(MicroVTune, self).__init__("micro_v_tune")
 
-    def _set_io(self):
-        self._sys_IOs = self._get_bag_ios([ThesisConfig.straight_nojerk_bag])
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([ThesisConfig.straight_nojerk_bag])
 
     def _set_kalman_filters(self):
         for micro_v in ThesisConfig.micro_v_list:
@@ -188,13 +186,55 @@ class MicroVTune(ThesisExperimentSuite):
             self._experiments.append(experiment)
 
 
+class MicroVTesting(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(MicroVTesting, self).__init__("micro_v_test")
+
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([
+            ThesisConfig.straight_nojerk_bag,
+            ThesisConfig.straight_jerk_bag])
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+                ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+                ThesisConfig.alpha, ThesisConfig.beta,
+                ThesisConfig.mass,
+                ThesisConfig.length, ThesisConfig.width,
+                ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+                )
+        self._kalman_filters.append(kalman_filter)
+        kalman_filter = KalmanFilter(
+                ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+                ThesisConfig.alpha, ThesisConfig.beta,
+                ThesisConfig.mass,
+                ThesisConfig.length, ThesisConfig.width,
+                ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+                )
+        self._kalman_filters.append(kalman_filter)
+
+    def _set_experiments(self):
+        for sys_IO, kalman_filter, legend in \
+            zip(self._sys_IOs,
+                self._kalman_filters,
+                ThesisConfig.micro_v_test_legend):
+                    experiment = NoRotationExperiment(
+                        sys_IO,
+                        kalman_filter,
+                        ThesisConfig.micro_v_test_slice,
+                        legend
+                    )
+                    self._experiments.append(experiment)
+
+
 class MicroDPsiTune(ThesisExperimentSuite):
 
     def __init__(self):
         super(MicroDPsiTune, self).__init__("micro_dpsi_tune")
 
-    def _set_io(self):
-        self._sys_IOs = self._get_bag_ios([ThesisConfig.turn_nojerk_bag])
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([ThesisConfig.turn_nojerk_bag])
 
     def _set_kalman_filters(self):
         for micro_dpsi in ThesisConfig.micro_dpsi_list:
@@ -218,12 +258,54 @@ class MicroDPsiTune(ThesisExperimentSuite):
                 self._experiments.append(experiment)
 
 
+class MicroDPsiTesting(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(MicroDPsiTesting, self).__init__("micro_dpsi_test")
+
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([
+            ThesisConfig.turn_nojerk_bag,
+            ThesisConfig.turn_jerk_bag])
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+                ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+                ThesisConfig.alpha, ThesisConfig.beta,
+                ThesisConfig.mass,
+                ThesisConfig.length, ThesisConfig.width,
+                ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+                )
+        self._kalman_filters.append(kalman_filter)
+        kalman_filter = KalmanFilter(
+                ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+                ThesisConfig.alpha, ThesisConfig.beta,
+                ThesisConfig.mass,
+                ThesisConfig.length, ThesisConfig.width,
+                ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+                )
+        self._kalman_filters.append(kalman_filter)
+
+    def _set_experiments(self):
+        for sys_IO, kalman_filter, legend in \
+            zip(self._sys_IOs,
+                self._kalman_filters,
+                ThesisConfig.micro_dpsi_test_legend):
+                    experiment = Experiment(
+                        sys_IO,
+                        kalman_filter,
+                        ThesisConfig.micro_dpsi_test_slice,
+                        legend
+                    )
+                    self._experiments.append(experiment)
+
+
 class LineSimulation(ThesisExperimentSuite):
 
     def __init__(self):
         super(LineSimulation, self).__init__("line_sim")
 
-    def _set_io(self):
+    def _set_IOs(self):
         line_sim = LineSimulator(
             ThesisConfig.line_sim_time, ThesisConfig.peak_vel)
         line_sim.run()
@@ -258,6 +340,7 @@ class LineSimulation(ThesisExperimentSuite):
                     ThesisConfig.line_sim_slice,
                     legend)
                 self._experiments.append(experiment)
+
 
     # def transform_all_ekf(self):
     #     bags = [
@@ -309,5 +392,9 @@ if __name__ == '__main__':
     # micro_v_tune.plot()
     # micro_dpsi_tune = MicroDPsiTune()
     # micro_dpsi_tune.plot()
-    line_sim = LineSimulation()
-    line_sim.plot()
+    micro_v_testing = MicroVTesting()
+    micro_v_testing.plot()
+    micro_dpsi_testing = MicroDPsiTesting()
+    micro_dpsi_testing.plot()
+    # line_sim = LineSimulation()
+    # line_sim.plot()
