@@ -33,7 +33,10 @@ def get_gauss(sigma=None, slice_tuple=None):
         return gauss
 
 
-def get_noise(array=None, peak_still=None, peak_moving=None, moving_threshold=None):
+def get_noise(array=None,
+              peak_still=None,
+              peak_moving=None,
+              moving_threshold=None):
     if array is None or not peak_still or not moving_threshold:
         raise ValueError
     else:
@@ -52,7 +55,7 @@ def get_zero_section_indexes(array=None):
     else:
         last_x = 1
         pair = []
-        pairs=[]
+        pairs = []
         for i in range(len(array)-1):
             if array[i] == 0 and last_x != 0:
                 pair.append(i)
@@ -123,19 +126,19 @@ class SystemIOSimulator(object):
         else:
             self._input = None
             self._output = None
-            self._time = np.linspace(0, time, time * 1000)  # system output is 50Hz
+            self._time = np.linspace(0, time, time * 1000)
 
     def run(self):
         self._set_input()
         self._set_output()
 
-    def get_stamped_input(self):
+    def get_input(self):
         input_list = []
         for t, u0, u1 in zip(self._time, *self._input):
             input_list.append((t, (u0, u1)))
         return input_list
 
-    def get_stamped_output(self):
+    def get_output(self):
         output_list = []
         for t, y0, y1 in zip(self._time, *self._output):
             output_list.append((t, (y0, y1)))
@@ -162,12 +165,10 @@ class LineSimulator(SystemIOSimulator):
         box_function = get_boxcar(u0, 0.4, self._peak_vel)
         zeros = np.zeros(len(self._time))
         self._input = (box_function, zeros)
-        #self._input = (zeros, zeros)
 
     def _set_output(self):
         u0 = np.zeros(len(self._time)).tolist()
         u0 = get_boxcar(u0, 0.4, self._peak_vel)
-        #gauss = get_gauss(0.03, (0,0.5))
         gauss = get_gauss(0.3)
         conv = np.convolve(u0, gauss, mode="same")
         grad = 200 * np.gradient(conv)
@@ -176,7 +177,6 @@ class LineSimulator(SystemIOSimulator):
         accel += grad
         accel += moving_noise
         accel = np.roll(accel, 30)
-        # accel = np.negative(accel)
         zeros = np.zeros(len(self._time))
         self._output = (accel, zeros)
 

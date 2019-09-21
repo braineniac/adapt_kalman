@@ -33,7 +33,31 @@ def check_directory(dir=None):
     return True
 
 
-class BagSysIO(object):
+class SysIO(object):
+
+    def __init__(self):
+        self._input
+        self._output
+
+    def get_input(self):
+        return self._input
+
+    def get_output(self):
+        return self._output
+
+
+class SimSysIO(SysIO):
+
+    def __init__(self, input=None, output=None):
+        if not isinstance(input, list) or not any(input):
+            raise ValueError("Passed empty or non list input!")
+        if not isinstance(output, list) or not any(output):
+            raise ValueError("Passed empty or non list output!")
+        self._input = input
+        self._output = output
+
+
+class BagSysIO(SysIO):
 
     def __init__(self,
                  bag_reader=None,
@@ -42,6 +66,7 @@ class BagSysIO(object):
                  state_odom=None):
         if not isinstance(bag_reader, BagReader):
             raise ValueError("Passed bag_reader not BagReader!")
+        super(BagSysIO, self).__init__(self)
         self._bag_reader = bag_reader
         self._input_twist = input_twist
         self._output_imu = output_imu
@@ -51,17 +76,20 @@ class BagSysIO(object):
         self._output_mask = [1, 0, 0, 0, 0, 1]
         self._state_mask = [1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1]
 
-    def get_input(self):
-        if not self._input_twist:
-            raise ValueError("Input topic not defined!")
-        stamped_input = self._bag_reader.read_twist(self._input_twist)
-        return self._filter(stamped_input, self._input_mask)
+        self._set_input()
+        self._set_output()
 
-    def get_output(self, stamped_output=None):
+    def _set_output(self):
         if not self._output_imu:
             raise ValueError("Output topic not defined!")
         stamped_output = self._bag_reader.read_imu(self._output_imu)
-        return self._filter(stamped_output, self._output_mask)
+        self._output = self._filter(stamped_output, self._output_mask)
+
+    def _set_input(self):
+        if not self._input_twist:
+            raise ValueError("Input topic not defined!")
+        stamped_input = self._bag_reader.read_twist(self._input_twist)
+        self._input = self._filter(stamped_input, self._input_mask)
 
     def get_states(self, stamped_states=None):
         if not self._state_odom:
@@ -78,7 +106,8 @@ class BagSysIO(object):
             mask = np.array(mask, dtype=bool)
             filtered_stamped_points = []
             for t, point in zip(time, points):
-                filtered_stamped_points.append((t, tuple(compress(point, mask))))
+                filtered_stamped_points.append(
+                    (t, tuple(compress(point, mask))))
             return filtered_stamped_points
 
 
@@ -241,7 +270,7 @@ class EstimationPlots(object):
             self._states_titles = [
                 "x state", "y state",
                 "v state", "a state",
-                "phi state", "dphi state", "ddphi_state"
+                "phi state", "dphi state", "ddphi state"
             ]
             self._Q_titles = ["Q[0][0]", "Q[1][1]"]
 

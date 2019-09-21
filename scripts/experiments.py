@@ -18,28 +18,28 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from kalman_estimator import KalmanFilter
-from kalman_estimator import BagSysIO, KalmanEstimator, EstimationPlots
+from kalman_estimator import SysIO, KalmanEstimator, EstimationPlots
 
 
 class Experiment(object):
 
     def __init__(self,
-                 bag_sys_io=None,
+                 sys_IO=None,
                  kalman_filter=None,
                  slice=(0, np.inf), legend=[]):
-        if not isinstance(bag_sys_io, BagSysIO):
-            raise ValueError("Passed bag_sys_io not a BagSysIO!")
+        if not isinstance(sys_IO, SysIO):
+            raise ValueError("Passed bag_sys_IO not a BagSysIO!")
         if not isinstance(kalman_filter, KalmanFilter):
             raise ValueError("Passed kalman_filter not a KalmanFilter!")
-        self._bag_sys_io = bag_sys_io
+        self._sys_IO = sys_IO
         self._kalman_filter = kalman_filter
         self._slice = slice
         self._legend = legend
 
     def _get_estimation(self):
         state_estimator = KalmanEstimator(self._kalman_filter)
-        state_estimator.set_stamped_input(self._bag_sys_io.get_input())
-        state_estimator.set_stamped_output(self._bag_sys_io.get_output())
+        state_estimator.set_stamped_input(self._sys_IO.get_input())
+        state_estimator.set_stamped_output(self._sys_IO.get_output())
         return state_estimator
 
     def get_estimation_plots(self):
@@ -49,15 +49,28 @@ class Experiment(object):
         return estimation_plotter
 
 
+class NoRotationExperiment(Experiment):
+    def __init__(self,
+                 sys_io=None,
+                 kalman_filter=None,
+                 slice=(0, np.inf), legend=[]):
+        super(NoRotationExperiment, self).__init__(sys_io,
+                                                   kalman_filter,
+                                                   slice, legend)
+
+    def _get_estimation(self):
+        state_estimator = KalmanEstimator(self._kalman_filter)
+        state_estimator.set_stamped_input(self._sys_IO.get_input())
+        state_estimator.set_stamped_output(self._sys_IO.get_output())
+        state_estimator.set_u1y1_zero()
+        return state_estimator
+
+
 class ExperimentSuite(object):
 
-    def __init__(self, name="", experiments=None):
-        if not isinstance(experiments, list):
-            raise ValueError("Pass a list of Experiment!")
-        if not all(isinstance(exp, Experiment) for exp in experiments):
-            raise ValueError("Pass a list only containing Experiment!")
+    def __init__(self, name=""):
         self._name = name
-        self._experiments = experiments
+        self._experiments = []
 
     def plot(self):
         experiment_plotter = ExperimentPlotter(self._experiments)

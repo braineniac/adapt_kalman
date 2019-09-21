@@ -124,7 +124,7 @@ class KalmanFilter(object):
              self._dt * float(np.cos(self._x_k_post[4])),
              0.5 * self._dt * self._dt * float(np.cos(self._x_k_post[4])),
              0, 0, 0],
-            [1, 0,
+            [0, 1,
              self._dt * float(np.sin(self._x_k_post[4])),
              0.5 * self._dt * self._dt * float(np.sin(self._x_k_post[4])),
              0, 0, 0],
@@ -148,10 +148,12 @@ class KalmanFilter(object):
         )
 
     def _update_error_covars(self):
-        self._P_k_post = (np.identity(7) - self._L_k.dot(self._C_k)).dot(self._P_k_pre)
+        self._P_k_post = \
+            (np.identity(7) - self._L_k.dot(self._C_k)).dot(self._P_k_pre)
 
     def _extr_states(self):
-        self._x_k_extr = self._Phi_k.dot(self._x_k_post) + self._Gamma_k.dot(self._u_k)
+        self._x_k_extr = \
+            self._Phi_k.dot(self._x_k_post) + self._Gamma_k.dot(self._u_k)
 
     def _extr_error_covars(self):
         self._P_k_extr = self._Phi_k.dot(self._P_k_post).dot(self._Phi_k.T) \

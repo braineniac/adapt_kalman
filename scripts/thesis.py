@@ -19,10 +19,12 @@ import numpy as np
 
 from kalman_estimator import KalmanFilter, AdaptiveKalmanFilter
 from kalman_estimator import MovingWeightedSigWindow
-from kalman_estimator import BagSysIO, KalmanEstimator, EstimationPlots
+from kalman_estimator import SysIO, SimSysIO, BagSysIO
+from kalman_estimator import KalmanEstimator, EstimationPlots
 from kalman_estimator import BagReader
 
-from experiments import Experiment, ExperimentPlotter, ExperimentSuite
+from experiments import Experiment, NoRotationExperiment
+from experiments import ExperimentPlotter, ExperimentSuite
 from simulator import LineSimulator, OctagonSimulator
 from bag_generator import EKFGenerator, IMUTransformGenerator
 
@@ -50,7 +52,7 @@ class ThesisConfig(object):
     beta = 1.5267
     r1 = 0.1
     r2 = 10
-    micro_v = 10
+    micro_v = 6
     micro_dpsi = 0.147
     mass = 1.02
     length = 0.25
@@ -93,18 +95,16 @@ class ThesisConfig(object):
     octagon_bag = "loops_7-8.bag"
     floor_bag = "floor.bag"
 
-    micro_v_list = [10, 11, 12]
+    micro_v_list = [5, 6, 7]
     micro_v_slice = (0, np.inf)
     micro_v_legend = [str(x) for x in micro_v_list]
     micro_dpsi_list = [0.143, 0.145, 0.147, 0.149, 0.151]
     micro_dpsi_slice = (0, np.inf)
     micro_dpsi_legend = [str(x) for x in micro_dpsi_list]
 
-    alphas_slice = [9, 32]
-    alpha_multi_slice = [0, np.inf]
-    betas_slice = [0, 50]
-    line_slice = (0.5, np.inf)
-    octagon_slice = (0, np.inf)
+    line_sim_time = 5
+    line_sim_slice = (0, np.inf)
+    line_sim_legend = ["KF", "aKF"]
 
     legend_multi = ["single", "multi"]
     legend_adapt = ["reference", "single", "multi"]
@@ -126,43 +126,46 @@ class ThesisConfig(object):
         return ThesisConfig.Q_k
 
 
-class ThesisExperimentSuite(object):
+class ThesisExperimentSuite(ExperimentSuite):
 
-    def __init__(self, bags=None):
-        self._bags_sys_io = self._get_bag_ios(bags)
-        self._kalman_filters = self._get_kalman_filters()
-        self._experiment_suite = self._get_experiment_suite()
+    def __init__(self, name=""):
+        super(ThesisExperimentSuite, self).__init__(name)
+        self._sys_IOs = []
+        self._kalman_filters = []
+
+        self._set_io()
+        self._set_kalman_filters()
+        self._set_experiments()
 
     def _get_bag_ios(self, bags=[]):
-        bags_sys_io = []
+        bags_sys_IO = []
         for bag in bags:
             bag_reader = BagReader(bag)
-            bag_sys_io = BagSysIO(bag_reader,
+            bag_sys_IO = BagSysIO(bag_reader,
                                   ThesisConfig.twist_topic,
                                   ThesisConfig.imu_topic)
-            bags_sys_io.append(bag_sys_io)
-        return bags_sys_io
+            bags_sys_IO.append(bag_sys_IO)
+        return bags_sys_IO
 
-    def plot(self):
-        self._experiment_suite.plot()
-
-    def export(self):
-        self._experiment_suite.export()
-
-    def _get_kalman_filters(self):
+    def _set_io(self):
         raise NotImplementedError
 
-    def _get_experiments_suite(self):
+    def _set_kalman_filters(self):
+        raise NotImplementedError
+
+    def _set_experiments(self):
         raise NotImplementedError
 
 
 class MicroVTune(ThesisExperimentSuite):
 
     def __init__(self):
-        super(MicroVTune, self).__init__([ThesisConfig.straight_nojerk_bag])
+        super(MicroVTune, self).__init__("micro_v_tune")
 
-    def _get_kalman_filters(self):
-        kalman_filters = []
+    def _set_io(self):
+        self._sys_IOs = self._get_bag_ios([ThesisConfig.straight_nojerk_bag])
+
+    def _set_kalman_filters(self):
         for micro_v in ThesisConfig.micro_v_list:
             kalman_filter = KalmanFilter(
                 ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
@@ -171,30 +174,28 @@ class MicroVTune(ThesisExperimentSuite):
                 ThesisConfig.length, ThesisConfig.width,
                 micro_v, ThesisConfig.micro_dpsi
             )
-            kalman_filters.append(kalman_filter)
-        return kalman_filters
+            self._kalman_filters.append(kalman_filter)
 
-    def _get_experiment_suite(self):
-        experiments = []
+    def _set_experiments(self):
         for kalman_filter, legend in \
                 zip(self._kalman_filters, ThesisConfig.micro_v_legend):
-            experiment = Experiment(
-                self._bags_sys_io[0],
+            experiment = NoRotationExperiment(
+                self._sys_IOs[0],
                 kalman_filter,
                 ThesisConfig.micro_v_slice,
                 legend)
-            experiments.append(experiment)
-        experiment_suite = ExperimentSuite("micro_v_tune", experiments)
-        return experiment_suite
+            self._experiments.append(experiment)
 
 
 class MicroDPsiTune(ThesisExperimentSuite):
 
     def __init__(self):
-        super(MicroDPsiTune, self).__init__([ThesisConfig.turn_nojerk_bag])
+        super(MicroDPsiTune, self).__init__("micro_dpsi_tune")
 
-    def _get_kalman_filters(self):
-        kalman_filters = []
+    def _set_io(self):
+        self._sys_IOs = self._get_bag_ios([ThesisConfig.turn_nojerk_bag])
+
+    def _set_kalman_filters(self):
         for micro_dpsi in ThesisConfig.micro_dpsi_list:
             kalman_filter = KalmanFilter(
                 ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
@@ -203,21 +204,59 @@ class MicroDPsiTune(ThesisExperimentSuite):
                 ThesisConfig.length, ThesisConfig.width,
                 ThesisConfig.micro_v, micro_dpsi
             )
-            kalman_filters.append(kalman_filter)
-        return kalman_filters
+            self._kalman_filters.append(kalman_filter)
 
-    def _get_experiment_suite(self):
-        experiments = []
+    def _set_experiments(self):
         for kalman_filter, legend in \
-                zip(self._kalman_filters, ThesisConfig.micro_dpsi_legend):
-            experiment = Experiment(
-                self._bags_sys_io[0],
-                kalman_filter,
-                ThesisConfig.micro_dpsi_slice,
-                legend)
-            experiments.append(experiment)
-        experiment_suite = ExperimentSuite("dpsi_v_tune", experiments)
-        return experiment_suite
+            zip(self._kalman_filters, ThesisConfig.micro_dpsi_legend):
+                experiment = Experiment(
+                    self._sys_IOs[0],
+                    kalman_filter,
+                    ThesisConfig.micro_dpsi_slice,
+                    legend)
+                self._experiments.append(experiment)
+
+
+class LineSimulation(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(LineSimulation, self).__init__("line_sim")
+
+    def _set_io(self):
+        line_sim = LineSimulator(
+            ThesisConfig.line_sim_time, ThesisConfig.peak_vel)
+        sim_io = SimSysIO(line_sim.get_input(), line_sim.get_output())
+        self._sys_IOs = sim_io
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+            ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, self.micro_dpsi
+        )
+        self._kalman_filters.append(kalman_filter)
+        adaptive_kalman_filter = AdaptiveKalmanFilter(
+            ThesisConfig.get_Q_k(0.00001, 0.00001), ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, self.micro_dpsi,
+            ThesisConfig.window, ThesisConfig.M_k
+        )
+        self._kalman_filters.append(adaptive_kalman_filter)
+
+    def _set_experiments(self):
+        for kalman_filter, legend in \
+            zip(self._kalman_filters, ThesisConfig.line_sim_legend):
+                experiment = Experiment(
+                    self._sys_IOs,
+                    kalman_filter,
+                    ThesisConfig.line_sim_slice,
+                    legend)
+                self._experiments.append(experiment)
+
 
 #
 # class AlphaExperiment(KalmanExperiment):
@@ -239,9 +278,9 @@ class MicroDPsiTune(ThesisExperimentSuite):
 #
 #
 # class AlphasExperiment(AlphaExperiment):
-#     def __init__(self, bag_sys_io=None, slice=(0, np.inf)):
+#     def __init__(self, bag_sys_IO=None, slice=(0, np.inf)):
 #         self.legend = [str(x) for x in alphas]
-#         super(AlphasExperiment, self).__init__(bag_sys_io, slice, legends)
+#         super(AlphasExperiment, self).__init__(bag_sys_IO, slice, legends)
 #
 #     def get_kalman_filters(self, alpha=None, beta=None, Q_k=None, R_k=None):
 #         if not isinstance(alpha, list):
@@ -663,8 +702,11 @@ class MicroDPsiTune(ThesisExperimentSuite):
 #                 imu_trans_generator.generate()
 #
 
+
 if __name__ == '__main__':
-    micro_v_tune = MicroVTune()
-    micro_v_tune.plot()
+    # micro_v_tune = MicroVTune()
+    # micro_v_tune.plot()
     # micro_dpsi_tune = MicroDPsiTune()
     # micro_dpsi_tune.plot()
+    line_sim = LineSimulation()
+    line_sim.plot()
