@@ -65,7 +65,7 @@ class ThesisConfig(object):
     Q_k[0][0] = R_k[0][0] * r1 * r1
     Q_k[1][1] = R_k[1][1] * r2 * r2
 
-    window = MovingWeightedSigWindow(50)
+    window = MovingWeightedSigWindow(10)
     M_k = np.zeros((2, 2))
     M_k[0][0] = 100
     M_k[1][1] = 100
@@ -108,6 +108,12 @@ class ThesisConfig(object):
     micro_v_test_legend = ["nojerk", "jerk"]
     micro_dpsi_test_slice = (0, np.inf)
     micro_dpsi_test_legend = ["nojerk", "jerk"]
+
+    octagon_slice = (0, np.inf)
+    octagon_legend = ["KF", "aKF"]
+
+    floor_slice = (0, np.inf)
+    floor_legend = ["Kf", "aKF"]
 
     line_sim_time = 10
     peak_vel = 1
@@ -300,6 +306,84 @@ class MicroDPsiTesting(ThesisExperimentSuite):
                     self._experiments.append(experiment)
 
 
+class Octagon(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(Octagon, self).__init__("octagon")
+
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([ThesisConfig.octagon_bag])
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(kalman_filter)
+        adaptive_kalman_filter = AdaptiveKalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi,
+            ThesisConfig.line_sim_window, ThesisConfig.M_k
+        )
+        self._kalman_filters.append(adaptive_kalman_filter)
+
+    def _set_experiments(self):
+        for kalman_filter, legend in \
+            zip(self._kalman_filters, ThesisConfig.octagon_legend):
+                experiment = Experiment(
+                    self._sys_IOs[0],
+                    kalman_filter,
+                    ThesisConfig.octagon_slice,
+                    legend
+                )
+                self._experiments.append(experiment)
+
+
+class Floor(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(Floor, self).__init__("floor")
+
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([ThesisConfig.floor_bag])
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(kalman_filter)
+        adaptive_kalman_filter = AdaptiveKalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi,
+            ThesisConfig.line_sim_window, ThesisConfig.M_k
+        )
+        self._kalman_filters.append(adaptive_kalman_filter)
+
+    def _set_experiments(self):
+        for kalman_filter, legend in \
+            zip(self._kalman_filters, ThesisConfig.floor_legend):
+                experiment = Experiment(
+                    self._sys_IOs[0],
+                    kalman_filter,
+                    ThesisConfig.floor_slice,
+                    legend
+                )
+                self._experiments.append(experiment)
+
+
 class LineSimulation(ThesisExperimentSuite):
 
     def __init__(self):
@@ -392,9 +476,13 @@ if __name__ == '__main__':
     # micro_v_tune.plot()
     # micro_dpsi_tune = MicroDPsiTune()
     # micro_dpsi_tune.plot()
-    micro_v_testing = MicroVTesting()
-    micro_v_testing.plot()
-    micro_dpsi_testing = MicroDPsiTesting()
-    micro_dpsi_testing.plot()
+    # micro_v_testing = MicroVTesting()
+    # micro_v_testing.plot()
+    # micro_dpsi_testing = MicroDPsiTesting()
+    # micro_dpsi_testing.plot()
+    octagon = Octagon()
+    octagon.plot()
+    floor = Floor()
+    floor.plot()
     # line_sim = LineSimulation()
     # line_sim.plot()
