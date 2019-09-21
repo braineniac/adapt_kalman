@@ -170,7 +170,8 @@ class AdaptiveKalmanFilter(KalmanFilter):
                  Q_k=np.zeros((2, 2)), R_k=np.zeros((2, 2)),
                  alpha=1, beta=1,
                  mass=1,
-                 micro_theta=1, micro_eta=1,
+                 length=1, width=1,
+                 micro_v=1, micro_dpsi=1,
                  window=None, M_k=np.zeros((2, 2)),
                  x0=(0, 0, 0, 0, 0, 0, 0)):
         if not isinstance(window, MovingWeightedWindow):
@@ -181,7 +182,8 @@ class AdaptiveKalmanFilter(KalmanFilter):
             Q_k=Q_k, R_k=R_k,
             alpha=alpha, beta=beta,
             mass=mass,
-            micro_theta=micro_theta, micro_eta=micro_eta,
+            length=1, width=1,
+            micro_v=micro_v, micro_dpsi=micro_dpsi,
             x0=x0)
         self._window = window
         self._M_k = M_k

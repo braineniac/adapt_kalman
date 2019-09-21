@@ -36,8 +36,8 @@ def check_directory(dir=None):
 class SysIO(object):
 
     def __init__(self):
-        self._input
-        self._output
+        self._input = None
+        self._output = None
 
     def get_input(self):
         return self._input
@@ -66,7 +66,7 @@ class BagSysIO(SysIO):
                  state_odom=None):
         if not isinstance(bag_reader, BagReader):
             raise ValueError("Passed bag_reader not BagReader!")
-        super(BagSysIO, self).__init__(self)
+        super(BagSysIO, self).__init__()
         self._bag_reader = bag_reader
         self._input_twist = input_twist
         self._output_imu = output_imu
