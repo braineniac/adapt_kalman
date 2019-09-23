@@ -14,44 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os.path
 import numpy as np
 
 from kalman_estimator import KalmanFilter, AdaptiveKalmanFilter
 from kalman_estimator import MovingWeightedSigWindow
-from kalman_estimator import SysIO, SimSysIO, BagSysIO
-from kalman_estimator import KalmanEstimator, EstimationPlots
+from kalman_estimator import SimSysIO, BagSysIO
 from kalman_estimator import BagReader
 
 from experiments import Experiment, NoRotationExperiment
-from experiments import ExperimentPlotter, ExperimentSuite
-from simulator import LineSimulator, OctagonSimulator
-from bag_generator import EKFGenerator, IMUTransformGenerator
-
-
-def check_file(bag=None):
-    if os.path.isfile(bag):
-        if not os.access(bag, os.R_OK):
-            raise ValueError
-        return True
-    else:
-        return False
-
-
-def check_directory(dir=None):
-    if not dir:
-        raise ValueError
-    elif not os.path.exists(dir):
-        os.makedirs(dir)
-        print("Created directory " + dir)
-    return True
+from experiments import ExperimentSuite
+from simulator import LineSimulator
 
 
 class ThesisConfig(object):
     alpha = 10.905
     beta = 1.5267
-    r1 = 0.1
-    r2 = 10
+    r1 = 0.05
+    r2 = 0.385
     micro_v = 6
     micro_dpsi = 0.147
     mass = 1.02
@@ -65,10 +44,10 @@ class ThesisConfig(object):
     Q_k[0][0] = R_k[0][0] * r1 * r1
     Q_k[1][1] = R_k[1][1] * r2 * r2
 
-    window = MovingWeightedSigWindow(10)
+    window = MovingWeightedSigWindow(5)
     M_k = np.zeros((2, 2))
-    M_k[0][0] = 100
-    M_k[1][1] = 100
+    M_k[0][0] = 10
+    M_k[1][1] = 0.02
 
     twist_topic = "/fake_encoder/twist"
     imu_topic = "/imu_out/data"
@@ -91,7 +70,7 @@ class ThesisConfig(object):
     turn_jerk_bag_name = "5turns_m.bag"
     turn_jerk_bag = out_trans + "trans_" + turn_jerk_bag_name
 
-    octagon_bag_name = "loops_7-8.bag"
+    octagon_bag_name = "loops_5-6.bag"
     octagon_bag = out_trans + "trans_" + octagon_bag_name
 
     floor_bag_name = "floor.bag"
@@ -109,6 +88,9 @@ class ThesisConfig(object):
     micro_dpsi_test_slice = (0, np.inf)
     micro_dpsi_test_legend = ["nojerk", "jerk"]
 
+    straight_line_slice = (0, np.inf)
+    straight_line_legend = ["KF", "aKF"]
+
     octagon_slice = (0, np.inf)
     octagon_legend = ["KF", "aKF"]
 
@@ -119,7 +101,7 @@ class ThesisConfig(object):
     peak_vel = 1
     line_sim_slice = (0, np.inf)
     line_sim_legend = ["KF", "aKF"]
-    line_sim_window = MovingWeightedSigWindow(300)
+    line_sim_window = MovingWeightedSigWindow(500)
 
     @staticmethod
     def get_Q_k(r1=None, r2=None):
@@ -225,13 +207,13 @@ class MicroVTesting(ThesisExperimentSuite):
             zip(self._sys_IOs,
                 self._kalman_filters,
                 ThesisConfig.micro_v_test_legend):
-                    experiment = NoRotationExperiment(
-                        sys_IO,
-                        kalman_filter,
-                        ThesisConfig.micro_v_test_slice,
-                        legend
-                    )
-                    self._experiments.append(experiment)
+            experiment = NoRotationExperiment(
+                sys_IO,
+                kalman_filter,
+                ThesisConfig.micro_v_test_slice,
+                legend
+            )
+            self._experiments.append(experiment)
 
 
 class MicroDPsiTune(ThesisExperimentSuite):
@@ -255,13 +237,13 @@ class MicroDPsiTune(ThesisExperimentSuite):
 
     def _set_experiments(self):
         for kalman_filter, legend in \
-            zip(self._kalman_filters, ThesisConfig.micro_dpsi_legend):
-                experiment = Experiment(
-                    self._sys_IOs[0],
-                    kalman_filter,
-                    ThesisConfig.micro_dpsi_slice,
-                    legend)
-                self._experiments.append(experiment)
+                zip(self._kalman_filters, ThesisConfig.micro_dpsi_legend):
+            experiment = Experiment(
+                self._sys_IOs[0],
+                kalman_filter,
+                ThesisConfig.micro_dpsi_slice,
+                legend)
+            self._experiments.append(experiment)
 
 
 class MicroDPsiTesting(ThesisExperimentSuite):
@@ -297,13 +279,51 @@ class MicroDPsiTesting(ThesisExperimentSuite):
             zip(self._sys_IOs,
                 self._kalman_filters,
                 ThesisConfig.micro_dpsi_test_legend):
-                    experiment = Experiment(
-                        sys_IO,
-                        kalman_filter,
-                        ThesisConfig.micro_dpsi_test_slice,
-                        legend
-                    )
-                    self._experiments.append(experiment)
+            experiment = Experiment(
+                sys_IO,
+                kalman_filter,
+                ThesisConfig.micro_dpsi_test_slice,
+                legend
+            )
+            self._experiments.append(experiment)
+
+
+class StraightLine(ThesisExperimentSuite):
+
+    def __init__(self):
+        super(StraightLine, self).__init__("straight_line")
+
+    def _set_IOs(self):
+        self._sys_IOs = self._get_bag_IOs([ThesisConfig.straight_nojerk_bag])
+
+    def _set_kalman_filters(self):
+        kalman_filter = KalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(kalman_filter)
+        adaptive_kalman_filter = AdaptiveKalmanFilter(
+            ThesisConfig.Q_k, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi,
+            ThesisConfig.line_sim_window, ThesisConfig.M_k
+        )
+        self._kalman_filters.append(adaptive_kalman_filter)
+
+    def _set_experiments(self):
+        for kalman_filter, legend in \
+                zip(self._kalman_filters, ThesisConfig.straight_line_legend):
+            experiment = Experiment(
+                self._sys_IOs[0],
+                kalman_filter,
+                ThesisConfig.straight_line_slice,
+                legend)
+            self._experiments.append(experiment)
 
 
 class Octagon(ThesisExperimentSuite):
@@ -335,14 +355,14 @@ class Octagon(ThesisExperimentSuite):
 
     def _set_experiments(self):
         for kalman_filter, legend in \
-            zip(self._kalman_filters, ThesisConfig.octagon_legend):
-                experiment = Experiment(
-                    self._sys_IOs[0],
-                    kalman_filter,
-                    ThesisConfig.octagon_slice,
-                    legend
-                )
-                self._experiments.append(experiment)
+                zip(self._kalman_filters, ThesisConfig.octagon_legend):
+            experiment = Experiment(
+                self._sys_IOs[0],
+                kalman_filter,
+                ThesisConfig.octagon_slice,
+                legend
+            )
+            self._experiments.append(experiment)
 
 
 class Floor(ThesisExperimentSuite):
@@ -374,14 +394,14 @@ class Floor(ThesisExperimentSuite):
 
     def _set_experiments(self):
         for kalman_filter, legend in \
-            zip(self._kalman_filters, ThesisConfig.floor_legend):
-                experiment = Experiment(
-                    self._sys_IOs[0],
-                    kalman_filter,
-                    ThesisConfig.floor_slice,
-                    legend
-                )
-                self._experiments.append(experiment)
+                zip(self._kalman_filters, ThesisConfig.floor_legend):
+            experiment = Experiment(
+                self._sys_IOs[0],
+                kalman_filter,
+                ThesisConfig.floor_slice,
+                legend
+            )
+            self._experiments.append(experiment)
 
 
 class LineSimulation(ThesisExperimentSuite):
@@ -417,58 +437,13 @@ class LineSimulation(ThesisExperimentSuite):
 
     def _set_experiments(self):
         for kalman_filter, legend in \
-            zip(self._kalman_filters, ThesisConfig.line_sim_legend):
-                experiment = Experiment(
-                    self._sys_IOs,
-                    kalman_filter,
-                    ThesisConfig.line_sim_slice,
-                    legend)
-                self._experiments.append(experiment)
-
-
-    # def transform_all_ekf(self):
-    #     bags = [
-    #         self.out_trans + "trans_" + self.alphas_bag,
-    #         self.out_trans + "trans_" + self.betas_bag,
-    #         self.out_trans + "trans_" + self.octagon_bag,
-    #         self.out_trans + "trans_" + self.floor_bag,
-    #         self.out_trans + "trans_" + self.alphas_single_bag,
-    #         self.out_trans + "trans_" + self.betas_single_bag,
-    #         self.out_trans + "trans_" + self.alphas_multi_bag,
-    #         self.out_trans + "trans_" + self.betas_multi_bag,
-    #     ]
-    #     self.run_ekf_transforms(bags, self.out_ekf)
-    #
-    # def transform_all_IMU(self):
-    #     bags = [
-    #         self.output + self.alphas_single_bag,
-    #         self.output + self.betas_single_bag,
-    #         self.output + self.alphas_bag,
-    #         self.output + self.betas_bag,
-    #         self.output + self.alphas_multi_bag,
-    #         self.output + self.betas_multi_bag,
-    #         self.output + self.octagon_bag,
-    #         self.output + self.floor_bag
-    #     ]
-    #     self.run_IMU_transforms(bags, self.out_trans)
-    #
-    #
-    # def run_ekf_transforms(self, input_bags=[], output_folder=None):
-    #     if not input_bags or not check_directory(output_folder):
-    #         raise ValueError
-    #     else:
-    #         for bag in input_bags:
-    #             ekf_generator = EKFGenerator(bag, output_folder)
-    #             ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
-    #
-    # @staticmethod
-    # def run_IMU_transforms(input_bags=[], output_folder=None):
-    #     if not input_bags or not check_directory(output_folder):
-    #         raise ValueError
-    #     else:
-    #         for bag in input_bags:
-    #             imu_trans_generator = IMUTransformGenerator(bag, output_folder)
-    #             imu_trans_generator.generate()
+                zip(self._kalman_filters, ThesisConfig.line_sim_legend):
+            experiment = Experiment(
+                self._sys_IOs,
+                kalman_filter,
+                ThesisConfig.line_sim_slice,
+                legend)
+            self._experiments.append(experiment)
 
 
 if __name__ == '__main__':
@@ -480,9 +455,12 @@ if __name__ == '__main__':
     # micro_v_testing.plot()
     # micro_dpsi_testing = MicroDPsiTesting()
     # micro_dpsi_testing.plot()
+    # straight_line = StraightLine()
+    # straight_line.plot()
     octagon = Octagon()
     octagon.plot()
-    floor = Floor()
-    floor.plot()
+    # floor = Floor()
+    # floor.plot()
     # line_sim = LineSimulation()
     # line_sim.plot()
+    # line_sim.export()

@@ -114,3 +114,47 @@ class IMUTransformGenerator(BagGenerator):
                 "output:={}".format(output)
             ]
             super(IMUTransformGenerator, self)._generate(cli_args)
+
+    # def transform_all_ekf(self):
+    #     bags = [
+    #         self.out_trans + "trans_" + self.alphas_bag,
+    #         self.out_trans + "trans_" + self.betas_bag,
+    #         self.out_trans + "trans_" + self.octagon_bag,
+    #         self.out_trans + "trans_" + self.floor_bag,
+    #         self.out_trans + "trans_" + self.alphas_single_bag,
+    #         self.out_trans + "trans_" + self.betas_single_bag,
+    #         self.out_trans + "trans_" + self.alphas_multi_bag,
+    #         self.out_trans + "trans_" + self.betas_multi_bag,
+    #     ]
+    #     self.run_ekf_transforms(bags, self.out_ekf)
+    #
+    # def transform_all_IMU(self):
+    #     bags = [
+    #         self.output + self.alphas_single_bag,
+    #         self.output + self.betas_single_bag,
+    #         self.output + self.alphas_bag,
+    #         self.output + self.betas_bag,
+    #         self.output + self.alphas_multi_bag,
+    #         self.output + self.betas_multi_bag,
+    #         self.output + self.octagon_bag,
+    #         self.output + self.floor_bag
+    #     ]
+    #     self.run_IMU_transforms(bags, self.out_trans)
+    #
+    #
+    # def run_ekf_transforms(self, input_bags=[], output_folder=None):
+    #     if not input_bags or not check_directory(output_folder):
+    #         raise ValueError
+    #     else:
+    #         for bag in input_bags:
+    #             ekf_generator = EKFGenerator(bag, output_folder)
+    #             ekf_generator.generate(self.r1, self.r2, self.alpha, self.beta)
+    #
+    # @staticmethod
+    # def run_IMU_transforms(input_bags=[], output_folder=None):
+    #     if not input_bags or not check_directory(output_folder):
+    #         raise ValueError
+    #     else:
+    #         for bag in input_bags:
+    #             imu_trans_generator = IMUTransformGenerator(bag, output_folder)
+    #        imu_trans_generator.generate()
