@@ -43,6 +43,9 @@ class ThesisConfig(object):
     Q_k = np.zeros((2, 2))
     Q_k[0][0] = R_k[0][0] * r1 * r1
     Q_k[1][1] = R_k[1][1] * r2 * r2
+    Q_k_mistuned = np.zeros((2, 2))
+    Q_k_mistuned[0][0] = R_k[0][0] * r1 * r1
+    Q_k_mistuned[1][1] = R_k[1][1] * r2 * r2 * 0.01
 
     window = MovingWeightedSigWindow(5)
     M_k = np.zeros((2, 2))
@@ -85,17 +88,17 @@ class ThesisConfig(object):
 
     micro_v_test_slice = (0, np.inf)
     micro_v_test_legend = ["nojerk", "jerk"]
-    micro_dpsi_test_slice = (0, np.inf)
+    micro_dpsi_test_slice = (0, 48)
     micro_dpsi_test_legend = ["nojerk", "jerk"]
 
     straight_line_slice = (0, np.inf)
     straight_line_legend = ["KF", "aKF"]
 
     octagon_slice = (0, np.inf)
-    octagon_legend = ["KF", "aKF"]
+    octagon_legend = ["KF", "aKF", "mistuned"]
 
     floor_slice = (0, np.inf)
-    floor_legend = ["Kf", "aKF"]
+    floor_legend = ["Kf", "aKF", "mistuned"]
 
     line_sim_time = 10
     peak_vel = 1
@@ -352,6 +355,14 @@ class Octagon(ThesisExperimentSuite):
             ThesisConfig.line_sim_window, ThesisConfig.M_k
         )
         self._kalman_filters.append(adaptive_kalman_filter)
+        mistuned_kalman_filter = KalmanFilter(
+            ThesisConfig.Q_k_mistuned, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(mistuned_kalman_filter)
 
     def _set_experiments(self):
         for kalman_filter, legend in \
@@ -391,6 +402,14 @@ class Floor(ThesisExperimentSuite):
             ThesisConfig.line_sim_window, ThesisConfig.M_k
         )
         self._kalman_filters.append(adaptive_kalman_filter)
+        mistuned_kalman_filter = KalmanFilter(
+            ThesisConfig.Q_k_mistuned, ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(mistuned_kalman_filter)
 
     def _set_experiments(self):
         for kalman_filter, legend in \
@@ -447,20 +466,27 @@ class LineSimulation(ThesisExperimentSuite):
 
 
 if __name__ == '__main__':
-    # micro_v_tune = MicroVTune()
-    # micro_v_tune.plot()
-    # micro_dpsi_tune = MicroDPsiTune()
-    # micro_dpsi_tune.plot()
-    # micro_v_testing = MicroVTesting()
-    # micro_v_testing.plot()
-    # micro_dpsi_testing = MicroDPsiTesting()
-    # micro_dpsi_testing.plot()
-    # straight_line = StraightLine()
-    # straight_line.plot()
+    micro_v_tune = MicroVTune()
+    micro_v_tune.plot()
+    micro_v_tune.export()
+    micro_dpsi_tune = MicroDPsiTune()
+    micro_dpsi_tune.plot()
+    micro_dpsi_tune.export()
+    micro_v_testing = MicroVTesting()
+    micro_v_testing.plot()
+    micro_v_testing.export()
+    micro_dpsi_testing = MicroDPsiTesting()
+    micro_dpsi_testing.plot()
+    micro_dpsi_testing.export()
+    straight_line = StraightLine()
+    straight_line.plot()
+    straight_line.export()
     octagon = Octagon()
     octagon.plot()
-    # floor = Floor()
-    # floor.plot()
-    # line_sim = LineSimulation()
-    # line_sim.plot()
-    # line_sim.export()
+    octagon.export()
+    floor = Floor()
+    floor.plot()
+    floor.export()
+    line_sim = LineSimulation()
+    line_sim.plot()
+    line_sim.export()

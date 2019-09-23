@@ -355,7 +355,7 @@ class EstimationPlots(object):
     def export_output(self, pre="", post=""):
         t, y = self.get_output_plot()
         y0, y1 = y
-        dir = "../../data/{}".format(pre)
+        dir = "data/{}".format(pre)
         np.savetxt("{}/{}y0{}.csv".format(dir, pre, post),
                    np.transpose([t, y0]), header='t y0',
                    comments='# ', delimiter=' ', newline='\n')
@@ -366,7 +366,7 @@ class EstimationPlots(object):
     def export_input(self, pre="", post=""):
         t, u = self.get_input_plot()
         u0, u1 = u
-        dir = "../../data/{}".format(pre)
+        dir = "data/{}".format(pre)
         check_directory(dir)
         np.savetxt("{}/{}u0{}.csv".format(dir, pre, post),
                    np.transpose([t, u0]), header='t u0',
@@ -378,7 +378,7 @@ class EstimationPlots(object):
     def export_states(self, pre="", post=""):
         t, x = self.get_states_plot()
         x0, x1, x2, x3, x4, x5, x6 = x
-        dir = "../../data/{}".format(pre)
+        dir = "data/{}".format(pre)
         check_directory(dir)
         np.savetxt("{}/{}x0{}.csv".format(dir, pre, post),
                    np.transpose([t, x0]), header='t x0',
@@ -404,7 +404,7 @@ class EstimationPlots(object):
 
     def export_x0x1(self, pre="", post=""):
         x0, x1 = self.get_x0x1_plot()
-        dir = "../../data/{}".format(pre)
+        dir = "data/{}".format(pre)
         check_directory(dir)
         np.savetxt("{}/{}x0x1{}.csv".format(dir, pre, post),
                    np.transpose([x0, x1]), header='x0 x1',
@@ -414,7 +414,7 @@ class EstimationPlots(object):
         if self.get_Q_plot():
             t, Q = self.get_Q_plot()
             Q0, Q1 = Q
-            dir = "../../data/{}".format(pre)
+            dir = "data/{}".format(pre)
             check_directory(dir)
             np.savetxt("{}/{}Q0{}.csv".format(dir, pre, post),
                        np.transpose([t, Q0]), header='t Q0',
