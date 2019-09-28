@@ -109,7 +109,7 @@ class ThesisConfig(object):
     line_sim_M_k[0][0] = 100
     line_sim_M_k[1][1] = 0.02
     line_sim_sigma = 0.1
-    line_sim_flatness = 1.2
+    line_sim_flatness = 1.8
     line_sim_peak_u = 0.5
     line_sim_peak_vel = alpha * line_sim_peak_u / micro_v
 

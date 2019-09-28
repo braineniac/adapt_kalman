@@ -250,10 +250,11 @@ class LineSimulator(SystemIOSimulator):
 
     def _set_output(self):
         x, y, v, a, psi, dspi, ddpsi = self._states
-        accel = np.gradient(v)
+        accel = 500 * np.gradient(v)
         zeros = np.zeros(len(self._time))
-        self._output = (accel, zeros)
         self._states[3] = accel
+        noise = get_noise(accel, 0.5, 0.3, 0.1)
+        self._output = (accel + noise, zeros)
 
     # def _set_output(self):
     #     u0 = np.zeros(len(self._time)).tolist()
