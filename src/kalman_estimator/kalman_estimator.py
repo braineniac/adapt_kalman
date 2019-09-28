@@ -138,7 +138,6 @@ class StateEstimator(object):
         else:
             new_stamped_states = []
             for stamp, states in stamped_states:
-                states = self._v_state_form(states)
                 states = self._psi_state_limit(states)
                 new_stamped_states.append((stamp, states))
             self._stamped_states = new_stamped_states
@@ -169,6 +168,9 @@ class StateEstimator(object):
         else:
             self._stamped_output = stamped_output
             self._add_time_from_output()
+
+    def set_stamped_Q(self, stamped_Q=None):
+        self._stamped_Q = stamped_Q
 
     # @staticmethod
     # def _v_state_form(state=None):

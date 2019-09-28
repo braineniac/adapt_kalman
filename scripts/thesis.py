@@ -21,7 +21,7 @@ from kalman_estimator import MovingWeightedSigWindow
 from kalman_estimator import SimSysIO, BagSysIO
 from kalman_estimator import BagReader
 
-from experiments import Experiment, NoRotationExperiment
+from experiments import Experiment, NoRotationExperiment, SimExperiment
 from experiments import ExperimentSuite
 from simulator import LineSimulator
 
@@ -45,7 +45,7 @@ class ThesisConfig(object):
     Q_k[1][1] = R_k[1][1] * r2 * r2
     Q_k_mistuned = np.zeros((2, 2))
     Q_k_mistuned[0][0] = R_k[0][0] * r1 * r1
-    Q_k_mistuned[1][1] = R_k[1][1] * r2 * r2 * 0.01
+    Q_k_mistuned[1][1] = R_k[1][1] * (r2*0.5) * (r2*0.5)
 
     window = MovingWeightedSigWindow(5)
     M_k = np.zeros((2, 2))
@@ -91,7 +91,7 @@ class ThesisConfig(object):
     micro_dpsi_test_slice = (0, 48)
     micro_dpsi_test_legend = ["nojerk", "jerk"]
 
-    straight_line_slice = (0, np.inf)
+    straight_line_slice = (14, 30)
     straight_line_legend = ["KF", "aKF"]
 
     octagon_slice = (0, np.inf)
@@ -101,10 +101,17 @@ class ThesisConfig(object):
     floor_legend = ["Kf", "aKF", "mistuned"]
 
     line_sim_time = 10
-    peak_vel = 1
     line_sim_slice = (0, np.inf)
-    line_sim_legend = ["KF", "aKF"]
-    line_sim_window = MovingWeightedSigWindow(500)
+    line_sim_kalman_legend = ["KF", "aKF"]
+    line_sim_ref_legend = "ref"
+    line_sim_window = MovingWeightedSigWindow(100)
+    line_sim_M_k = np.zeros((2, 2))
+    line_sim_M_k[0][0] = 100
+    line_sim_M_k[1][1] = 0.02
+    line_sim_sigma = 0.1
+    line_sim_flatness = 1.2
+    line_sim_peak_u = 0.5
+    line_sim_peak_vel = alpha * line_sim_peak_u / micro_v
 
     @staticmethod
     def get_Q_k(r1=None, r2=None):
@@ -426,13 +433,22 @@ class Floor(ThesisExperimentSuite):
 class LineSimulation(ThesisExperimentSuite):
 
     def __init__(self):
+        self._sim = None
+        self._set_sim()
         super(LineSimulation, self).__init__("line_sim")
 
-    def _set_IOs(self):
+    def _set_sim(self):
         line_sim = LineSimulator(
-            ThesisConfig.line_sim_time, ThesisConfig.peak_vel)
+            ThesisConfig.line_sim_time,
+            ThesisConfig.line_sim_peak_u,
+            ThesisConfig.line_sim_peak_vel,
+            ThesisConfig.line_sim_sigma,
+            ThesisConfig.line_sim_flatness)
         line_sim.run()
-        sim_io = SimSysIO(line_sim.get_input(), line_sim.get_output())
+        self._sim = line_sim
+
+    def _set_IOs(self):
+        sim_io = SimSysIO(self._sim.get_input(), self._sim.get_output())
         self._sys_IOs = sim_io
 
     def _set_kalman_filters(self):
@@ -450,13 +466,17 @@ class LineSimulation(ThesisExperimentSuite):
             ThesisConfig.mass,
             ThesisConfig.length, ThesisConfig.width,
             ThesisConfig.micro_v, ThesisConfig.micro_dpsi,
-            ThesisConfig.line_sim_window, ThesisConfig.M_k
+            ThesisConfig.line_sim_window, ThesisConfig.line_sim_M_k
         )
         self._kalman_filters.append(adaptive_kalman_filter)
 
     def _set_experiments(self):
+        sim_experiment = SimExperiment(self._sim,
+                                       ThesisConfig.line_sim_slice,
+                                       ThesisConfig.line_sim_ref_legend)
+        self._experiments.append(sim_experiment)
         for kalman_filter, legend in \
-                zip(self._kalman_filters, ThesisConfig.line_sim_legend):
+                zip(self._kalman_filters, ThesisConfig.line_sim_kalman_legend):
             experiment = Experiment(
                 self._sys_IOs,
                 kalman_filter,
@@ -467,26 +487,28 @@ class LineSimulation(ThesisExperimentSuite):
 
 if __name__ == '__main__':
     micro_v_tune = MicroVTune()
-    micro_v_tune.plot()
-    micro_v_tune.export()
     micro_dpsi_tune = MicroDPsiTune()
-    micro_dpsi_tune.plot()
-    micro_dpsi_tune.export()
     micro_v_testing = MicroVTesting()
-    micro_v_testing.plot()
-    micro_v_testing.export()
     micro_dpsi_testing = MicroDPsiTesting()
-    micro_dpsi_testing.plot()
-    micro_dpsi_testing.export()
     straight_line = StraightLine()
-    straight_line.plot()
-    straight_line.export()
     octagon = Octagon()
-    octagon.plot()
-    octagon.export()
     floor = Floor()
-    floor.plot()
-    floor.export()
     line_sim = LineSimulation()
-    line_sim.plot()
+
+    # micro_v_tune.plot()
+    # micro_dpsi_tune.plot()
+    # micro_v_testing.plot()
+    # micro_dpsi_testing.plot()
+    # straight_line.plot()
+    # octagon.plot()
+    # floor.plot()
+    # line_sim.plot()
+
+    # micro_v_tune.export()
+    # micro_dpsi_tune.export()
+    # micro_v_testing.export()
+    # micro_dpsi_testing.export()
+    # straight_line.export()
+    # octagon.export()
+    # floor.export()
     line_sim.export()

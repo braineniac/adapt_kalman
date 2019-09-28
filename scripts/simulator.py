@@ -17,20 +17,29 @@
 import numpy as np
 
 
-def get_gauss(sigma=None, slice_tuple=None):
+def get_gauss(sigma=None, range=1):
     if not sigma:
         raise ValueError
     else:
-        N_gauss = 100
-        x = np.linspace(-1, 1, N_gauss)
+        N_gauss = 2000
+        x = np.linspace(-range, range, N_gauss)
         gauss = np.exp(-(x / sigma) ** 2 / 2)
-        gauss = gauss / gauss.sum()  # normalize
-        if slice_tuple is not None:
-            for i in range(int(N_gauss * slice_tuple[0])-1):
-                gauss[i] = 0
-            for j in range(int(N_gauss * slice_tuple[1])):
-                gauss[-j] = 0
         return gauss
+
+
+# def get_gauss(sigma=None, slice_tuple=None):
+#     if not sigma:
+#         raise ValueError
+#     else:
+#         N_gauss = 2000
+#         x = np.linspace(-1, 1, N_gauss)
+#         gauss = np.exp(-(x / sigma) ** 2 / 2)
+#         if slice_tuple is not None:
+#             for i in range(int(N_gauss * slice_tuple[0])-1):
+#                 gauss[i] = 0
+#             for j in range(int(N_gauss * slice_tuple[1])):
+#                 gauss[-j] = 0
+#         return gauss
 
 
 def get_noise(array=None,
@@ -118,6 +127,16 @@ def divide_into_sections(array=None, num_of_sections=None):
         return sections
 
 
+def get_edge_indexes(array=None, threshold=0):
+    indexes = []
+    last_elem = 0
+    for i in range(len(array)):
+        if abs(array[i] - last_elem) > threshold:
+            indexes.append(i)
+            last_elem = array[i]
+    return indexes
+
+
 class SystemIOSimulator(object):
 
     def __init__(self, time=None):
@@ -126,7 +145,8 @@ class SystemIOSimulator(object):
         else:
             self._input = None
             self._output = None
-            self._time = np.linspace(0, time, time * 1000)
+            self._states = None
+            self._time = np.linspace(0, time, time * 500)
 
     def run(self):
         self._set_input()
@@ -144,6 +164,21 @@ class SystemIOSimulator(object):
             output_list.append((t, (y0, y1)))
         return output_list
 
+    def get_states(self):
+        states_list = []
+        for t, x, y, v, a, psi, dspi, ddpsi in zip(self._time, *self._states):
+            states_list.append((t, (x, y, v, a, psi, dspi, ddpsi)))
+        return states_list
+
+    def get_Q(self):
+        stamped_Q = []
+        for t in self._time:
+            stamped_Q.append((t, (0, 0)))
+        return stamped_Q
+
+    def _set_states(self):
+        raise NotImplementedError
+
     def _set_input(self):
         raise NotImplementedError
 
@@ -153,32 +188,86 @@ class SystemIOSimulator(object):
 
 class LineSimulator(SystemIOSimulator):
 
-    def __init__(self, time=None, peak_vel=None):
+    def __init__(self,
+                 time=None,
+                 peak_u=None,
+                 peak_vel=None,
+                 sigma=None,
+                 flatness=None):
         if not time or not peak_vel:
             raise ValueError
         else:
             super(LineSimulator, self).__init__(time)
+            self._peak_u = peak_u
             self._peak_vel = peak_vel
+            self._sigma = sigma
+            self._flatness = flatness
+            self._velocity = None
+
+    def run(self):
+        self._set_input()
+        self._set_velocity()
+        self._set_states()
+        self._set_output()
+
+    def _set_states(self):
+        zeros = np.zeros(len(self._time)).tolist()
+        # x,y,v,a,psi,dpsi,ddpsi
+        states = [[], [], [], [], [], [], []]
+        vel = self._velocity
+        time = self._time
+        for v, t in zip(vel, time):
+            states[0].append(v * t)
+        states[2] = vel
+        states[3] = zeros
+        states[1] = zeros
+        states[4] = zeros
+        states[5] = zeros
+        states[6] = zeros
+        self._states = states
 
     def _set_input(self):
         u0 = np.zeros(len(self._time)).tolist()
-        box_function = get_boxcar(u0, 0.4, self._peak_vel)
+        box_function = get_boxcar(u0, 0.4, self._peak_u)
         zeros = np.zeros(len(self._time))
         self._input = (box_function, zeros)
 
+    def _set_velocity(self):
+        v = np.zeros(len(self._time)).tolist()
+        v = get_boxcar(v, 0.4, self._peak_vel)
+        edge_indexes = get_edge_indexes(v)
+        gauss = self._peak_vel * get_gauss(self._sigma, self._flatness)
+        for i in range(int(len(gauss)/2)):
+            v[edge_indexes[0]-int(len(gauss)/2)+i] = gauss[i]
+            v[edge_indexes[1]-1+i] = gauss[int(len(gauss)/2)+i]
+        roll = get_edge_indexes(self._input[0])[0] \
+            - get_edge_indexes(v, 0.01)[0]
+        v = np.roll(v, roll)
+        np.append(v, np.zeros(roll))
+        for i in range(roll):
+            v = np.delete(v, int(len(v)/2))
+        self._velocity = v
+
     def _set_output(self):
-        u0 = np.zeros(len(self._time)).tolist()
-        u0 = get_boxcar(u0, 0.4, self._peak_vel)
-        gauss = get_gauss(0.3)
-        conv = np.convolve(u0, gauss, mode="same")
-        grad = 200 * np.gradient(conv)
-        moving_noise = get_noise(grad, 3, 2, 0.1)
-        accel = 0
-        accel += grad
-        accel += moving_noise
-        accel = np.roll(accel, 30)
+        x, y, v, a, psi, dspi, ddpsi = self._states
+        accel = np.gradient(v)
         zeros = np.zeros(len(self._time))
         self._output = (accel, zeros)
+        self._states[3] = accel
+
+    # def _set_output(self):
+    #     u0 = np.zeros(len(self._time)).tolist()
+    #     u0 = get_boxcar(u0, 0.4, self._peak_vel)
+    #     gauss = get_gauss(0.001)
+    #     conv = np.convolve(u0, gauss, mode="same")
+    #     grad = 200 * np.gradient(conv)
+    #     moving_noise = get_noise(grad, 0.5, 0.3, 0.1)
+    #     accel = 0
+    #     accel += grad
+    #     accel += moving_noise
+    #     accel = np.roll(accel, 30)
+    #     zeros = np.zeros(len(self._time))
+    #     self._output = (accel, zeros)
 
 
 class OctagonSimulator(SystemIOSimulator):
@@ -236,3 +325,7 @@ class OctagonSimulator(SystemIOSimulator):
         conv = np.convolve(u1, gauss, mode="same")
         noise = get_moving_noise(conv, 0.3, 0.1)
         return conv + noise
+
+if __name__ == '__main__':
+    line_sim = LineSimulator(10, 0.5)
+    line_sim.run()

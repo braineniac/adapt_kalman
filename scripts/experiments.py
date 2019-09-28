@@ -18,7 +18,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from kalman_estimator import KalmanFilter
-from kalman_estimator import SysIO, KalmanEstimator, EstimationPlots
+from kalman_estimator import SysIO, KalmanEstimator
+from kalman_estimator import StateEstimator, EstimationPlots
 
 
 class Experiment(object):
@@ -63,6 +64,24 @@ class NoRotationExperiment(Experiment):
         state_estimator.set_stamped_input(self._sys_IO.get_input())
         state_estimator.set_stamped_output(self._sys_IO.get_output())
         state_estimator.set_u1y1_zero()
+        return state_estimator
+
+
+class SimExperiment(Experiment):
+
+    def __init__(self,
+                 sim=None,
+                 slice=(0, np.inf), legend=[]):
+        self._sim = sim
+        self._slice = slice
+        self._legend = legend
+
+    def _get_estimation(self):
+        state_estimator = StateEstimator()
+        state_estimator.set_stamped_input(self._sim.get_input())
+        state_estimator.set_stamped_output(self._sim.get_output())
+        state_estimator.set_stamped_states(self._sim.get_states())
+        state_estimator.set_stamped_Q(self._sim.get_Q())
         return state_estimator
 
 
