@@ -102,7 +102,7 @@ class ThesisConfig(object):
 
     line_sim_time = 10
     line_sim_slice = (0, np.inf)
-    line_sim_kalman_legend = ["KF", "aKF"]
+    line_sim_kalman_legend = ["KF", "aKF", "no out", "just out"]
     line_sim_ref_legend = "ref"
     line_sim_window = MovingWeightedSigWindow(100)
     line_sim_M_k = np.zeros((2, 2))
@@ -469,6 +469,22 @@ class LineSimulation(ThesisExperimentSuite):
             ThesisConfig.line_sim_window, ThesisConfig.line_sim_M_k
         )
         self._kalman_filters.append(adaptive_kalman_filter)
+        ignore_output_kalman_filter = KalmanFilter(
+            ThesisConfig.get_Q_k(0.001, 0.001), ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(ignore_output_kalman_filter)
+        just_output_kalman_filter = KalmanFilter(
+            ThesisConfig.get_Q_k(9999, 9999), ThesisConfig.R_k,
+            ThesisConfig.alpha, ThesisConfig.beta,
+            ThesisConfig.mass,
+            ThesisConfig.length, ThesisConfig.width,
+            ThesisConfig.micro_v, ThesisConfig.micro_dpsi
+        )
+        self._kalman_filters.append(just_output_kalman_filter)
 
     def _set_experiments(self):
         sim_experiment = SimExperiment(self._sim,
