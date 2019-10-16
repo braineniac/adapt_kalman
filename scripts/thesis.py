@@ -45,7 +45,7 @@ class ThesisConfig(object):
     Q_k[1][1] = R_k[1][1] * r2 * r2
     Q_k_mistuned = np.zeros((2, 2))
     Q_k_mistuned[0][0] = R_k[0][0] * r1 * r1
-    Q_k_mistuned[1][1] = R_k[1][1] * r2 * r2 * 0.01
+    Q_k_mistuned[1][1] = R_k[1][1] * (r2 * 1.5) * (r2 * 1.5)
 
     window = MovingWeightedSigWindow(5)
     M_k = np.zeros((2, 2))
@@ -105,6 +105,9 @@ class ThesisConfig(object):
     line_sim_slice = (0, np.inf)
     line_sim_legend = ["KF", "aKF"]
     line_sim_window = MovingWeightedSigWindow(500)
+    line_sim_M_k = np.zeros((2, 2))
+    line_sim_M_k[0][0] = 100
+    line_sim_M_k[1][1] = 0.02
 
     @staticmethod
     def get_Q_k(r1=None, r2=None):
@@ -450,7 +453,7 @@ class LineSimulation(ThesisExperimentSuite):
             ThesisConfig.mass,
             ThesisConfig.length, ThesisConfig.width,
             ThesisConfig.micro_v, ThesisConfig.micro_dpsi,
-            ThesisConfig.line_sim_window, ThesisConfig.M_k
+            ThesisConfig.line_sim_window, ThesisConfig.line_sim_M_k
         )
         self._kalman_filters.append(adaptive_kalman_filter)
 
@@ -466,27 +469,27 @@ class LineSimulation(ThesisExperimentSuite):
 
 
 if __name__ == '__main__':
-    micro_v_tune = MicroVTune()
-    micro_v_tune.plot()
-    micro_v_tune.export()
-    micro_dpsi_tune = MicroDPsiTune()
-    micro_dpsi_tune.plot()
-    micro_dpsi_tune.export()
-    micro_v_testing = MicroVTesting()
-    micro_v_testing.plot()
-    micro_v_testing.export()
-    micro_dpsi_testing = MicroDPsiTesting()
-    micro_dpsi_testing.plot()
-    micro_dpsi_testing.export()
-    straight_line = StraightLine()
-    straight_line.plot()
-    straight_line.export()
+    #micro_v_tune = MicroVTune()
+    #micro_v_tune.plot()
+    #micro_v_tune.export()
+    #micro_dpsi_tune = MicroDPsiTune()
+    #micro_dpsi_tune.plot()
+    #micro_dpsi_tune.export()
+    #micro_v_testing = MicroVTesting()
+    #micro_v_testing.plot()
+    #micro_v_testing.export()
+    #micro_dpsi_testing = MicroDPsiTesting()
+    #micro_dpsi_testing.plot()
+    #micro_dpsi_testing.export()
+    #straight_line = StraightLine()
+    #straight_line.plot()
+    #straight_line.export()
     octagon = Octagon()
     octagon.plot()
-    octagon.export()
+    #octagon.export()
     floor = Floor()
     floor.plot()
-    floor.export()
+    #floor.export()
     line_sim = LineSimulation()
-    line_sim.plot()
+    #line_sim.plot()
     line_sim.export()
