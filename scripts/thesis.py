@@ -45,9 +45,9 @@ class ThesisConfig(object):
     Q_k[1][1] = R_k[1][1] * r2 * r2
     Q_k_mistuned = np.zeros((2, 2))
     Q_k_mistuned[0][0] = R_k[0][0] * r1 * r1
-    Q_k_mistuned[1][1] = R_k[1][1] * (r2*0.5) * (r2*0.5)
+    Q_k_mistuned[1][1] = R_k[1][1] * (r2*1.5) * (r2*1.5)
 
-    window = MovingWeightedSigWindow(5)
+    window = MovingWeightedSigWindow(5, 7)
     M_k = np.zeros((2, 2))
     M_k[0][0] = 10
     M_k[1][1] = 0.02
@@ -104,7 +104,7 @@ class ThesisConfig(object):
     line_sim_slice = (0, np.inf)
     line_sim_kalman_legend = ["KF", "aKF", "no out", "just out"]
     line_sim_ref_legend = "ref"
-    line_sim_window = MovingWeightedSigWindow(100)
+    line_sim_window = MovingWeightedSigWindow(200, 7)
     line_sim_M_k = np.zeros((2, 2))
     line_sim_M_k[0][0] = 100
     line_sim_M_k[1][1] = 0.02
@@ -520,11 +520,11 @@ if __name__ == '__main__':
     # floor.plot()
     # line_sim.plot()
 
-    # micro_v_tune.export()
-    # micro_dpsi_tune.export()
-    # micro_v_testing.export()
-    # micro_dpsi_testing.export()
-    # straight_line.export()
-    # octagon.export()
-    # floor.export()
+    micro_v_tune.export()
+    micro_dpsi_tune.export()
+    micro_v_testing.export()
+    micro_dpsi_testing.export()
+    straight_line.export()
+    octagon.export()
+    floor.export()
     line_sim.export()
