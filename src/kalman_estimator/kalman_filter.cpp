@@ -1,29 +1,58 @@
 #include <iostream>
 #include <Eigen/Dense>
-
+#include <math.h>
 using namespace Eigen;
 
-class KalmanFilter {
+class GarryStateSpace {
 public:
-    KalmanFilter(MatrixXd, MatrixXd, MatrixXd,
-                 MatrixXd, MatrixXd, MatrixXd,
-                 MatrixXd, MatrixXd);
-
-    MatrixXd R_k, Q_k;
-    VectorXd x_k_pre, x_k_post, x_k_extr;
-    VectorXd x0;
-    MatrixXd P_k_pre, P_k_post, P_k_extr;
-
-    VectorXd u_k, y_k;
-    MatrixXd L_k;
+    GarryStateSpace(double,double,double,double,double,double,double);
 
     MatrixXd Phi_k;
     MatrixXd Gamma_k;
     MatrixXd C_k;
     MatrixXd D_k;
 
+    Vector2d u_k, y_k;
+    double t;
+    double dt;
+};
+
+GarryStateSpace::GarryStateSpace(
+    double alpha,
+    double beta,
+    double mass,
+    double length,
+    double width,
+    double micro_v,
+    double micro_dpsi
+) {
+    Phi_k.setZero(7,7);
+    Phi_k(0,0) = 1;
+    Phi_k(0,2) = dt;
+
+}
+
+class KalmanFilter {
+public:
+    KalmanFilter(MatrixXd, MatrixXd, MatrixXd,
+                 MatrixXd, MatrixXd, MatrixXd,
+                 MatrixXd, MatrixXd);
+    int filter_iter(double, VectorXd, VectorXd);
+
+    MatrixXd Phi_k;
+    MatrixXd Gamma_k;
+    MatrixXd C_k;
+    MatrixXd D_k;
+
+    MatrixXd R_k, Q_k;
+    VectorXd x_k_pre, x_k_post, x_k_extr;
+    VectorXd x0;
+    MatrixXd P_k_pre, P_k_post, P_k_extr;
+    MatrixXd L_k;
     MatrixXd G_k;
     MatrixXd H_k;
+
+    Vector2d u_k, y_k;
 
     double t;
     double dt;
@@ -77,6 +106,24 @@ KalmanFilter::KalmanFilter(
 
         t = 0;
         dt = 0;
+}
+
+int KalmanFilter::filter_iter(double time_stamp, VectorXd u, VectorXd y) {
+    // time_stamp sanity check
+    if (time_stamp < t) {
+        throw "Time stamp can't be smaller than filter time!";
+    }
+    dt = time_stamp - t;
+    t = time_stamp;
+
+    // u and y size check
+    if (u.size() < Gamma_k.cols() || y.size() < C_k.rows()) {
+        throw "u or y dimension is wrong!";
+    }
+    u_k = u;
+    y_k = y;
+
+    return 0;
 }
 
 int main() {
