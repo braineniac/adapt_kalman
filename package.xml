@@ -10,12 +10,16 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>rospy</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>eigen</build_depend>
   <build_export_depend>rospy</build_export_depend>
 
   <exec_depend>python-rosdep</exec_depend>
   <exec_depend>python-rospkg</exec_depend>
   <exec_depend>roslaunch</exec_depend>
   <exec_depend>rospy</exec_depend>
+  <exec_depend>roscpp</exec_depend>
+  <exec_depend>eigen3</exec_depend>
 
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
